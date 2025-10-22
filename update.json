@@ -1,0 +1,7 @@
+{
+  "version": "1.30",
+  "app_name": "CodePass",
+  "download_url": "https://drive.google.com/uc?export=download&id=1wrKzNAalhj5cRlYAXy7kX7BbyOrZlMGq",
+  "update_type": "in_place",
+  "notes": "Nowy interfejs graficzny, tryb aktualizacji bez utraty zapisanych haseł. Poprawione błędy i wygląd aplikacji."
+}
