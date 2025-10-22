@@ -1,7 +1,5 @@
 {
   "version": "1.30",
-  "app_name": "CodePass",
-  "download_url": "https://drive.google.com/uc?export=download&id=1wrKzNAalhj5cRlYAXy7kX7BbyOrZlMGq",
-  "update_type": "in_place",
-  "notes": "Nowy interfejs graficzny, tryb aktualizacji bez utraty zapisanych haseł. Poprawione błędy i wygląd aplikacji."
+  "download_url": "https://github.com/codepass0v12/Codepass/releases/download/v1.30/CodePass_1.30.zip",
+  "notes": "Pierwsze wydanie CodePass z aktualizacjami z GitHuba"
 }
