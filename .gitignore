@@ -205,3 +205,9 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+# Ignoruj pliki binarne i buildy
+*.exe
+*.zip
+/dist/
+/build/
+/__pycache__/
