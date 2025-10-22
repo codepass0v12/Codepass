@@ -9,7 +9,8 @@ from updater import check_for_updates, perform_update_flow
 
 FILENAME = "Hasła.txt"
 VERSION_TXT_DEFAULT = "1.0.0"
-MANIFEST_URL = "https://drive.google.com/uc?export=download&id=1wrKzNAalhj5cRlYAXy7kX7BbyOrZlMGq"
+MANIFEST_URL = "https://raw.githubusercontent.com/codepass0v12/Codepass/main/update.json"
+
 
 
 def get_local_version():

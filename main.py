@@ -16,8 +16,8 @@ APP_VERSION = "1.30"
 
 # 🌐 Link do manifestu aktualizacji (update.json)
 # 👇 wklej tu swój link z Google Drive (lub później z GitHuba)
-MANIFEST_URL = "https://drive.google.com/uc?export=download&id=1wrKzNAalhj5cRlYAXy7kX7BbyOrZlMGqgit --version
-"
+MANIFEST_URL = "https://raw.githubusercontent.com/codepass0v12/Codepass/main/update.json"
+
 
 
 def main():
