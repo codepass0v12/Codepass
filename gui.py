@@ -4,7 +4,7 @@ import random
 import string
 import os
 import subprocess
-from updater import check_for_updates, perform_update_flow
+from updater import check_for_updates
 
 
 FILENAME = "Hasła.txt"
@@ -181,15 +181,10 @@ class CodePassGUI:
         except Exception:
             subprocess.Popen(["notepad", FILENAME])
 
-    def check_update_now(self):
-        current = get_local_version()
-        manifest = check_for_updates(current, MANIFEST_URL)
-        if manifest:
-            new_version = manifest.get("version", "?")
-            if messagebox.askyesno(
-                "Aktualizacja dostępna",
-                f"Dostępna wersja {new_version}. Zaktualizować teraz?"
-            ):
-                perform_update_flow(manifest)
-        else:
-            messagebox.showinfo("Aktualizacje", "Masz najnowszą wersję.")
+
+def check_update_now(self):
+    """Wywołuje ręczne sprawdzenie aktualizacji"""
+    try:
+        check_for_updates()  # nowa wersja updatera robi wszystko sama
+    except Exception as e:
+        messagebox.showerror("Błąd aktualizacji", f"Nie udało się sprawdzić aktualizacji:\n{e}")

@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # 🔧 Import modułów aplikacji
 from gui import CodePassGUI
-from updater import check_for_updates, perform_update_flow
+from updater import check_for_updates
 
 
 # 🔢 Numer aktualnej wersji programu
@@ -17,7 +17,6 @@ APP_VERSION = "1.30"
 # 🌐 Link do manifestu aktualizacji (update.json)
 # 👇 wklej tu swój link z Google Drive (lub później z GitHuba)
 MANIFEST_URL = "https://raw.githubusercontent.com/codepass0v12/Codepass/main/update.json"
-
 
 
 def main():
@@ -29,12 +28,12 @@ def main():
 
     # 🧩 Sprawdzenie aktualizacji
     try:
-        manifest = check_for_updates(APP_VERSION, MANIFEST_URL)
-        if manifest:
-            perform_update_flow(manifest)
+        check_for_updates()  # <-- nowa funkcja obsługuje cały proces
     except Exception as e:
         print(f"[Błąd aktualizacji] {e}")
         messagebox.showwarning("Aktualizacja", f"Nie udało się sprawdzić aktualizacji:\n{e}")
+
+    # 🎨 Uruchamiamy główny interfejs
 
     # 🎨 Uruchamiamy główny interfejs
     app = CodePassGUI(root)
