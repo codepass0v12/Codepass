@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
 # ======================================
-# 📁 USTAWIENIA ŚCIEŻEK
+# 📁 KONFIGURACJA ŚCIEŻEK
 # ======================================
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -29,7 +29,7 @@ UPDATE_BASE_URL = "https://raw.githubusercontent.com/codepass0v12/Codepass/main/
 GITHUB_REPO     = "codepass0v12/Codepass"
 
 # ======================================
-# 🔧 FUNKCJE POMOCNICZE
+# 🧩 FUNKCJE POMOCNICZE
 # ======================================
 
 def ensure_dirs():
@@ -45,16 +45,37 @@ def read_version() -> str:
     with open(VERSION_PATH, "r", encoding="utf-8") as f:
         return f.read().strip()
 
-def bump_version() -> str:
-    """Zwiększa numer wersji o +0.0.1"""
-    ver = read_version()
-    major, minor, patch = map(int, ver.split("."))
-    patch += 1
-    new_ver = f"{major}.{minor}.{patch}"
+def bump_version_interactive() -> str:
+    """
+    Pozwala ręcznie ustawić nowy numer wersji (np. 2.1.0).
+    Jeśli użytkownik nic nie wpisze, zwiększa automatycznie patch.
+    """
+    current = read_version()
+    print(f"📘 Aktualna wersja: {current}")
+    user_input = input("➡️  Podaj nowy numer wersji (np. 2.1.0) lub naciśnij Enter, aby automatycznie zwiększyć patch: ").strip()
+
+    if not user_input:
+        # automatyczne zwiększenie patch
+        try:
+            major, minor, patch = map(int, current.split("."))
+            patch += 1
+            new_version = f"{major}.{minor}.{patch}"
+        except Exception:
+            new_version = "1.0.0"
+        print(f"⬆️  Automatycznie ustawiono nową wersję: {new_version}")
+    else:
+        # walidacja formatu x.y.z
+        parts = user_input.split(".")
+        if len(parts) != 3 or not all(p.isdigit() for p in parts):
+            raise ValueError("❌ Niepoprawny format wersji! Użyj formatu np. 2.1.0")
+        new_version = user_input
+        print(f"✅ Ustawiono wersję: {new_version}")
+
+    # zapis do pliku version.txt
     with open(VERSION_PATH, "w", encoding="utf-8") as f:
-        f.write(new_ver)
-    print(f"⬆️  Wersja: {ver} → {new_ver}")
-    return new_ver
+        f.write(new_version)
+
+    return new_version
 
 def run(cmd: list, cwd: Optional[str] = None) -> subprocess.CompletedProcess:
     """Uruchamia polecenie i zwraca wynik."""
@@ -62,7 +83,7 @@ def run(cmd: list, cwd: Optional[str] = None) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
 
 # ======================================
-# 🧱 BUDOWANIE EXE
+# ⚙️ PYINSTALLER + BUILD EXE
 # ======================================
 
 def ensure_pyinstaller():
@@ -147,10 +168,6 @@ def build_exe() -> str:
 def prepare_build_folder(version: str):
     """Czyści folder build/ i kopiuje pliki źródłowe."""
     print(f"== 📦 Przygotowywanie build ({version}) ==")
-
-    # 🛑 Ochrona przed przypadkowym usunięciem src/
-    if os.path.abspath(BUILD_DIR) == os.path.abspath(SRC_DIR):
-        raise RuntimeError("BŁĄD: BUILD_DIR wskazuje na SRC_DIR!")
 
     if os.path.exists(BUILD_DIR):
         shutil.rmtree(BUILD_DIR)
@@ -245,7 +262,7 @@ def git_push(version: str):
 
 def main():
     ensure_dirs()
-    version = bump_version()
+    version = bump_version_interactive()
     print(f"== Build CodePass v{version} ==")
 
     build_exe()
