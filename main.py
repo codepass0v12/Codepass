@@ -2,6 +2,11 @@ import os
 import sys
 import tkinter as tk
 from tkinter import messagebox
+from updater import auto_update_check
+
+# 🔄 automatyczne sprawdzenie aktualizacji przy starcie
+auto_update_check()
+
 
 # ✅ Upewniamy się, że folder z plikami (gui, updater itd.) jest w ścieżce Pythona
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
