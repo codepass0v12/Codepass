@@ -6,24 +6,24 @@ import subprocess
 import sys
 import tkinter as tk
 from tkinter import messagebox
-
-
+import tkinter.simpledialog as sd
 
 from updater import check_for_updates, perform_update_flow, get_local_version
-import security  # szyfrowanie DPAPI + Fernet
-
+import security
+import config_manager  # 🔐 nowy moduł do obsługi PIN-u
 
 PASSWORD_FILE = "Hasła.enc"
 MANIFEST_URL = "https://raw.githubusercontent.com/codepass0v12/Codepass/main/update.json"
 
 
-# ==================== 🔐 Weryfikacja Windows Hello ====================
+# ==================== 🔐 Weryfikacja Windows Hello lub PIN ====================
 
 def windows_authenticate_hello() -> bool:
     """
-    Uruchamia Windows Hello w osobnym procesie, aby zawsze był na pierwszym planie.
+    Próbuje uruchomić Windows Hello, a jeśli system go nie obsługuje —
+    wyświetla awaryjny ekran z PIN-em lokalnym.
     """
-    result = {"verified": False}
+    import tempfile, subprocess, sys, os
 
     hello_code = r'''
 import asyncio
@@ -48,24 +48,38 @@ asyncio.run(verify())
     tmp.close()
 
     try:
-        proc = subprocess.run(
-            [sys.executable, tmp.name],
-            capture_output=True, text=True, timeout=60
-        )
+        proc = subprocess.run([sys.executable, tmp.name], capture_output=True, text=True, timeout=15)
         output = proc.stdout.strip()
+        print("[Hello output]", output)
 
         if "OK" in output:
-            result["verified"] = True
-        elif "NO_HELLO" in output:
-            messagebox.showerror("Windows Hello", "Windows Hello nie jest skonfigurowany na tym urządzeniu.")
-        else:
-            messagebox.showwarning("Weryfikacja", "Nie potwierdzono tożsamości.")
-    except subprocess.TimeoutExpired:
-        messagebox.showerror("Błąd Hello", "Przekroczono limit czasu na potwierdzenie tożsamości.")
+            return True
+        if "NO_HELLO" in output:
+            messagebox.showwarning("Windows Hello", "Windows Hello niedostępny — użyj PIN-u awaryjnego.")
     except Exception as e:
-        messagebox.showerror("Błąd Hello", f"Nie udało się uruchomić Windows Hello:\n{e}")
+        print("[Błąd Hello subprocess]", e)
+        messagebox.showerror("Błąd Hello", "Nie można uruchomić Windows Hello. Przejście do trybu awaryjnego.")
+    finally:
+        try:
+            os.remove(tmp.name)
+        except Exception:
+            pass
 
-    return result["verified"]
+    # 🔐 Tryb awaryjny — użycie PIN-u z configu
+    cfg = config_manager.load_config()
+    user_pin = sd.askstring("PIN awaryjny", "Podaj swój PIN awaryjny:", show="*")
+
+    if not cfg.get("pin"):
+        messagebox.showerror("Brak PIN-u", "Nie ustawiono jeszcze PIN-u awaryjnego.")
+        return False
+
+    if user_pin == cfg["pin"]:
+        return True
+    elif user_pin is None:
+        messagebox.showwarning("Anulowano", "Nie wprowadzono PIN-u.")
+    else:
+        messagebox.showerror("Błąd", "Niepoprawny PIN.")
+    return False
 
 
 # ======================== 🌙 Klasa GUI ========================
@@ -136,13 +150,23 @@ class CodePassGUI:
         ).grid(row=0, column=3, padx=12)
 
         # --- bezpieczeństwo ---
+        row3 = tk.Frame(root, bg="#202225")
+        row3.pack(pady=6)
+
         tk.Checkbutton(
-            root,
+            row3,
             text="Większe bezpieczeństwo (wymagaj Windows Hello przy zapisie)",
             variable=self.secure_var,
             font=("Segoe UI", 12), bg="#202225", fg="#00FFAA",
             selectcolor="#2F3136", activebackground="#202225"
-        ).pack(pady=6)
+        ).grid(row=0, column=0, padx=6, sticky="w")
+
+        # 🔑 nowy przycisk obok checkboxa
+        tk.Button(
+            row3, text="🔑 Ustaw PIN awaryjny", command=self.set_fallback_pin,
+            font=("Segoe UI", 12), bg="#2F3136", fg="white",
+            activebackground="#40444B", relief="flat", padx=12, pady=4
+        ).grid(row=0, column=1, padx=12)
 
         # --- przyciski ---
         btns = tk.Frame(root, bg="#202225")
@@ -280,3 +304,16 @@ class CodePassGUI:
                 self.version_label.config(text=f"Wersja {self.version}")
         else:
             messagebox.showinfo("Aktualizacje", "Masz najnowszą wersję.")
+
+    def set_fallback_pin(self):
+        cfg = config_manager.load_config()
+        new_pin = sd.askstring("Ustaw PIN", "Podaj nowy PIN awaryjny:", show="*")
+        if not new_pin:
+            return
+        confirm = sd.askstring("Potwierdź PIN", "Powtórz nowy PIN:", show="*")
+        if new_pin != confirm:
+            messagebox.showerror("Błąd", "PIN-y się różnią.")
+            return
+        cfg["pin"] = new_pin
+        config_manager.save_config(cfg)
+        messagebox.showinfo("Zapisano", "PIN awaryjny został ustawiony.")

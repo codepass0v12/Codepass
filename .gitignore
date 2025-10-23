@@ -218,3 +218,27 @@ build/
 dist/
 __pycache__/
 *.pyc
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# Virtual environments
+.venv/
+env/
+
+# Build and dist
+build/
+dist/
+*.spec
+
+# Secrets
+private_key.pem
+public_key.pem
+config.key
+
+# Other
+*.enc
+.idea/
