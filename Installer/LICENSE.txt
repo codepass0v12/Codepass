@@ -1,0 +1,12 @@
+CodePass — Generator i Menedżer Haseł
+(c) 2025 CodePass Software
+
+Licencja użytkownika:
+Ten program jest dostarczany w stanie „tak jak jest”.
+Użytkownik korzysta z niego na własną odpowiedzialność.
+
+Zabronione jest:
+- dekompilowanie, modyfikowanie lub dalsze rozpowszechnianie programu,
+- usuwanie informacji o prawach autorskich.
+
+Więcej informacji: https://github.com/codepass0v12/Codepass
