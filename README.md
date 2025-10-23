@@ -1,2 +1,0 @@
-# Codepass
-pass gen

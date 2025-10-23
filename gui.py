@@ -1,190 +1,282 @@
-import tkinter as tk
-from tkinter import messagebox
+import os
 import random
 import string
-import os
+import tempfile
 import subprocess
-from updater import check_for_updates
+import sys
+import tkinter as tk
+from tkinter import messageboxs
 
 
-FILENAME = "Hasła.txt"
-VERSION_TXT_DEFAULT = "1.0.0"
+
+from updater import check_for_updates, perform_update_flow, get_local_version
+import security  # szyfrowanie DPAPI + Fernet
+
+
+PASSWORD_FILE = "Hasła.enc"
 MANIFEST_URL = "https://raw.githubusercontent.com/codepass0v12/Codepass/main/update.json"
 
 
+# ==================== 🔐 Weryfikacja Windows Hello ====================
 
-def get_local_version():
+def windows_authenticate_hello() -> bool:
+    """
+    Uruchamia Windows Hello w osobnym procesie, aby zawsze był na pierwszym planie.
+    """
+    result = {"verified": False}
+
+    hello_code = r'''
+import asyncio
+import winrt.windows.security.credentials.ui as ui
+
+async def verify():
+    availability = await ui.UserConsentVerifier.check_availability_async()
+    if availability != ui.UserConsentVerifierAvailability.AVAILABLE:
+        print("NO_HELLO")
+        return
+    result = await ui.UserConsentVerifier.request_verification_async("Potwierdź tożsamość w CodePass")
+    if result == ui.UserConsentVerificationResult.VERIFIED:
+        print("OK")
+    else:
+        print("FAIL")
+
+asyncio.run(verify())
+'''
+
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".py", mode="w", encoding="utf-8")
+    tmp.write(hello_code)
+    tmp.close()
+
     try:
-        with open("version.txt", "r", encoding="utf-8") as f:
-            return f.read().strip()
-    except FileNotFoundError:
-        return VERSION_TXT_DEFAULT
+        proc = subprocess.run(
+            [sys.executable, tmp.name],
+            capture_output=True, text=True, timeout=60
+        )
+        output = proc.stdout.strip()
 
+        if "OK" in output:
+            result["verified"] = True
+        elif "NO_HELLO" in output:
+            messagebox.showerror("Windows Hello", "Windows Hello nie jest skonfigurowany na tym urządzeniu.")
+        else:
+            messagebox.showwarning("Weryfikacja", "Nie potwierdzono tożsamości.")
+    except subprocess.TimeoutExpired:
+        messagebox.showerror("Błąd Hello", "Przekroczono limit czasu na potwierdzenie tożsamości.")
+    except Exception as e:
+        messagebox.showerror("Błąd Hello", f"Nie udało się uruchomić Windows Hello:\n{e}")
+
+    return result["verified"]
+
+
+# ======================== 🌙 Klasa GUI ========================
 
 class CodePassGUI:
-    def __init__(self, root):
+    def __init__(self, root, version: str):
         self.root = root
-        self.root.title("CodePass 1.30")
-        self.root.geometry("700x640")
-        self.root.configure(bg="#101319")
-        self.root.resizable(False, False)
+        self.version = version
+        self.root.title("🔐 CodePass — Generator i Menedżer Haseł")
+        self.root.state("zoomed")
+        self.root.configure(bg="#202225")
 
-        # zmienne
-        self.length_var = tk.StringVar(value="12")
-        self.upper_var = tk.BooleanVar(value=True)
+        # --- szyfrowanie ---
+        try:
+            self.fernet = security.load_or_create_fernet()
+        except Exception as e:
+            messagebox.showerror("Błąd bezpieczeństwa", f"Nie udało się przygotować szyfrowania:\n{e}")
+            self.fernet = None
+
+        # --- zmienne ---
+        self.uppercase_var = tk.BooleanVar(value=True)
         self.special_var = tk.BooleanVar(value=True)
-        self.password_var = tk.StringVar()
-        self.domain_var = tk.StringVar()
-        self.login_var = tk.StringVar()
+        self.secure_var = tk.BooleanVar(value=False)
 
-        self.FONT_MAIN = ("Segoe UI", 12)
-        self.FONT_BTN = ("Segoe UI Semibold", 11)
-        self.FONT_TITLE = ("Segoe UI Semibold", 22, "bold")
+        # --- nagłówek ---
+        tk.Label(
+            root, text="🔐 CodePass — Generator i Menedżer Haseł",
+            font=("Segoe UI Semibold", 24), bg="#202225", fg="#FFFFFF"
+        ).pack(pady=24)
 
-        self.build_ui()
+        # --- domena/login ---
+        row1 = tk.Frame(root, bg="#202225")
+        row1.pack(pady=6)
 
-    def rounded_entry(self, parent, textvariable=None, width=25):
-        """Tworzy pole z zaokrągloną ramką"""
-        frame = tk.Frame(parent, bg="#101319", highlightbackground="#3a3f4b",
-                         highlightcolor="#3a3f4b", highlightthickness=1, bd=0)
-        entry = tk.Entry(frame, textvariable=textvariable, width=width,
-                         bg="#0d1117", fg="#ffffff", relief="flat",
-                         justify="center", font=self.FONT_MAIN)
-        entry.pack(ipady=6)
-        frame.pack(pady=4)
-        return entry
+        tk.Label(row1, text="Domena / Serwis:", font=("Segoe UI", 13),
+                 bg="#202225", fg="white").grid(row=0, column=0, padx=8, sticky="e")
+        self.domain_entry = tk.Entry(row1, font=("Segoe UI", 13),
+                                     width=28, bg="#2F3136", fg="white", relief="flat")
+        self.domain_entry.grid(row=0, column=1, padx=8)
 
-    def build_ui(self):
-        # Nagłówek
-        tk.Label(self.root, text="🔐 CodePass", font=self.FONT_TITLE,
-                 fg="#38bdf8", bg="#101319").pack(pady=(30, 8))
-        tk.Label(self.root, text="Nowoczesny generator bezpiecznych haseł",
-                 fg="#b0b8c3", bg="#101319", font=("Segoe UI", 11)).pack(pady=(0, 25))
+        tk.Label(row1, text="Login / E-mail:", font=("Segoe UI", 13),
+                 bg="#202225", fg="white").grid(row=0, column=2, padx=8, sticky="e")
+        self.login_entry = tk.Entry(row1, font=("Segoe UI", 13),
+                                    width=28, bg="#2F3136", fg="white", relief="flat")
+        self.login_entry.grid(row=0, column=3, padx=8)
 
-        # Ustawienia
-        settings = tk.Frame(self.root, bg="#181c25")
-        settings.pack(padx=30, pady=10, fill="x")
+        # --- długość + opcje ---
+        row2 = tk.Frame(root, bg="#202225")
+        row2.pack(pady=6)
 
-        tk.Label(settings, text="Długość hasła:", font=self.FONT_MAIN,
-                 fg="#e5e7eb", bg="#181c25").grid(row=0, column=0, padx=15, pady=12, sticky="w")
+        tk.Label(row2, text="Długość hasła:", font=("Segoe UI", 13),
+                 bg="#202225", fg="white").grid(row=0, column=0, padx=8, sticky="e")
+        self.length_entry = tk.Entry(row2, font=("Segoe UI", 13),
+                                     width=6, bg="#2F3136", fg="white", relief="flat")
+        self.length_entry.insert(0, "12")
+        self.length_entry.grid(row=0, column=1, padx=8, sticky="w")
 
-        self.length_entry = tk.Entry(settings, textvariable=self.length_var, width=6, justify="center",
-                                     bg="#0d1117", fg="#ffffff", relief="flat", font=self.FONT_MAIN)
-        self.length_entry.grid(row=0, column=1, padx=8)
+        tk.Checkbutton(
+            row2, text="Duże litery", variable=self.uppercase_var,
+            font=("Segoe UI", 12), bg="#202225", fg="white",
+            selectcolor="#2F3136", activebackground="#202225"
+        ).grid(row=0, column=2, padx=12)
 
-        tk.Checkbutton(settings, text="Duże litery", variable=self.upper_var,
-                       bg="#181c25", fg="#e5e7eb", selectcolor="#181c25",
-                       font=self.FONT_MAIN).grid(row=1, column=0, padx=15, pady=8, sticky="w")
-        tk.Checkbutton(settings, text="Znaki specjalne", variable=self.special_var,
-                       bg="#181c25", fg="#e5e7eb", selectcolor="#181c25",
-                       font=self.FONT_MAIN).grid(row=1, column=1, padx=8, pady=8, sticky="w")
+        tk.Checkbutton(
+            row2, text="Znaki specjalne", variable=self.special_var,
+            font=("Segoe UI", 12), bg="#202225", fg="white",
+            selectcolor="#2F3136", activebackground="#202225"
+        ).grid(row=0, column=3, padx=12)
 
-        # Generowanie
-        tk.Button(self.root, text="🔁 GENERUJ HASŁO", command=self.generate_password,
-                  bg="#2563eb", fg="white", relief="flat",
-                  activebackground="#3b82f6", activeforeground="white",
-                  font=self.FONT_BTN, padx=20, pady=8, width=22).pack(pady=20)
+        # --- bezpieczeństwo ---
+        tk.Checkbutton(
+            root,
+            text="Większe bezpieczeństwo (wymagaj Windows Hello przy zapisie)",
+            variable=self.secure_var,
+            font=("Segoe UI", 12), bg="#202225", fg="#00FFAA",
+            selectcolor="#2F3136", activebackground="#202225"
+        ).pack(pady=6)
 
-        # Hasło z przyciskiem kopiowania
-        pw_frame = tk.Frame(self.root, bg="#101319")
-        pw_frame.pack(pady=10)
+        # --- przyciski ---
+        btns = tk.Frame(root, bg="#202225")
+        btns.pack(pady=12)
 
-        self.password_entry = tk.Entry(pw_frame, textvariable=self.password_var, width=36,
-                                       font=("Consolas", 13), justify="center",
-                                       bg="#0d1117", fg="#00eaff", relief="flat")
-        self.password_entry.pack(side="left", ipady=6, padx=(0, 8))
+        tk.Button(
+            btns, text="🎲 Generuj hasło", command=self.generate_password,
+            font=("Segoe UI", 14, "bold"), bg="#5865F2", fg="white",
+            activebackground="#4752C4", relief="flat", padx=24, pady=10
+        ).grid(row=0, column=0, padx=8)
 
-        tk.Button(pw_frame, text="📋", bg="#272b33", fg="#e5e7eb",
-                  font=("Segoe UI", 11), relief="flat", padx=8, command=self.copy_password).pack(side="left")
+        tk.Button(
+            btns, text="📋 Kopiuj", command=self.copy_password,
+            font=("Segoe UI", 13), bg="#2F3136", fg="white",
+            activebackground="#40444B", relief="flat", padx=18, pady=8
+        ).grid(row=0, column=1, padx=8)
 
-        # Domena / login
-        form = tk.Frame(self.root, bg="#101319")
-        form.pack(pady=(20, 10))
+        tk.Button(
+            btns, text="💾 Zapisz wpis", command=self.save_password_secure,
+            font=("Segoe UI", 13), bg="#2F3136", fg="white",
+            activebackground="#40444B", relief="flat", padx=18, pady=8
+        ).grid(row=0, column=2, padx=8)
 
-        tk.Label(form, text="Domena / serwis:", bg="#101319", fg="#e5e7eb", font=self.FONT_MAIN).pack()
-        self.rounded_entry(form, self.domain_var)
+        tk.Button(
+            btns, text="📄 Pokaż zapisane", command=self.show_saved_entries,
+            font=("Segoe UI", 13), bg="#2F3136", fg="white",
+            activebackground="#40444B", relief="flat", padx=18, pady=8
+        ).grid(row=0, column=3, padx=8)
 
-        tk.Label(form, text="Login:", bg="#101319", fg="#e5e7eb", font=self.FONT_MAIN).pack(pady=(10, 0))
-        self.rounded_entry(form, self.login_var)
+        tk.Button(
+            btns, text="🔄 Sprawdź aktualizacje", command=self.manual_update_check,
+            font=("Segoe UI", 13, "bold"), bg="#5865F2", fg="white",
+            activebackground="#4752C4", relief="flat", padx=18, pady=8
+        ).grid(row=0, column=4, padx=8)
 
-        # Zapis / aktualizacja
-        tk.Button(self.root, text="💾 ZAPISZ HASŁO", bg="#16a34a", fg="white",
-                  activebackground="#22c55e", relief="flat",
-                  font=self.FONT_BTN, padx=20, pady=8, width=22,
-                  command=self.save_password).pack(pady=(25, 10))
+        # --- pole hasła ---
+        self.password_entry = tk.Entry(
+            root, font=("Segoe UI", 16), justify="center", width=48,
+            bg="#2F3136", fg="#00FFAA", relief="flat"
+        )
+        self.password_entry.pack(pady=8)
 
-        tk.Button(self.root, text="🔄 SPRAWDŹ AKTUALIZACJE", bg="#f97316", fg="white",
-                  activebackground="#fb923c", relief="flat",
-                  font=self.FONT_BTN, padx=20, pady=8, width=22,
-                  command=self.check_update_now).pack(pady=(5, 15))
+        # --- wersja ---
+        self.version_label = tk.Label(
+            root, text=f"Wersja {self.version}",
+            font=("Segoe UI", 12), bg="#202225", fg="#AAAAAA"
+        )
+        self.version_label.pack(side="bottom", pady=10)
 
-        tk.Label(self.root, text=f"Wersja: {get_local_version()}",
-                 bg="#101319", fg="#6b7280", font=("Segoe UI", 10)).pack(side="bottom", pady=10)
+    # ======================== Logika GUI ========================
 
-    # === Logika ===
     def generate_password(self):
         try:
-            length = int(self.length_var.get())
-            if length < 7:
-                messagebox.showinfo("Info", "Minimalna długość to 7.")
-                length = 7
+            length = int(self.length_entry.get())
+            if length < 5:
+                messagebox.showwarning("Uwaga", "Minimalna długość hasła to 5 znaków.")
+                length = 5
         except ValueError:
-            messagebox.showerror("Błąd", "Podaj poprawną długość (liczba).")
+            messagebox.showerror("Błąd", "Podaj poprawną długość (liczbę).")
             return
 
-        chars = string.ascii_lowercase + string.digits
-        if self.upper_var.get():
-            chars += string.ascii_uppercase
+        alphabet = string.ascii_lowercase + string.digits
+        if self.uppercase_var.get():
+            alphabet += string.ascii_uppercase
         if self.special_var.get():
-            chars += string.punctuation
+            alphabet += string.punctuation
 
-        password = "".join(random.choices(chars, k=length))
-        self.password_var.set(password)
+        pwd = "".join(random.choices(alphabet, k=length))
+        self.password_entry.delete(0, tk.END)
+        self.password_entry.insert(0, pwd)
 
     def copy_password(self):
-        pw = self.password_var.get().strip()
-        if not pw:
-            messagebox.showwarning("Kopiowanie", "Brak hasła do skopiowania.")
+        pwd = self.password_entry.get()
+        if not pwd:
+            messagebox.showwarning("Brak hasła", "Najpierw wygeneruj hasło.")
             return
         self.root.clipboard_clear()
-        self.root.clipboard_append(pw)
-        messagebox.showinfo("Kopiowanie", "Hasło zostało skopiowane do schowka.")
+        self.root.clipboard_append(pwd)
+        messagebox.showinfo("Skopiowano", "Hasło skopiowano do schowka.")
 
-    def save_password(self):
-        pw = self.password_var.get().strip()
-        domain = self.domain_var.get().strip()
-        login = self.login_var.get().strip()
-
-        if not pw:
-            messagebox.showerror("Błąd", "Najpierw wygeneruj hasło.")
-            return
-        if not domain or not login:
-            messagebox.showerror("Błąd", "Podaj domenę i login.")
+    def save_password_secure(self):
+        if self.fernet is None:
+            messagebox.showerror("Błąd", "Szyfrowanie jest niedostępne. Zapis anulowany.")
             return
 
-        lines = []
-        if os.path.exists(FILENAME):
-            with open(FILENAME, "r", encoding="utf-8") as f:
-                lines = [ln for ln in f.readlines() if ln.strip()]
-        next_nr = len(lines) + 1
+        domain = self.domain_entry.get().strip()
+        login = self.login_entry.get().strip()
+        pwd = self.password_entry.get().strip()
 
-        with open(FILENAME, "a", encoding="utf-8") as f:
-            f.write(f"{next_nr}. {domain} - {login} - {pw}\n")
+        if not pwd:
+            messagebox.showwarning("Brak hasła", "Najpierw wygeneruj hasło.")
+            return
+        if not domain:
+            messagebox.showwarning("Brak domeny", "Podaj domenę/serwis (np. facebook.com).")
+            return
+        if not login:
+            messagebox.showwarning("Brak loginu", "Podaj login lub e-mail.")
+            return
 
-        messagebox.showinfo("Zapisano", f"Zapisano pozycję #{next_nr} w {FILENAME}.")
-        self.domain_var.set("")
-        self.login_var.set("")
+        if self.secure_var.get() and not windows_authenticate_hello():
+            messagebox.showerror("Bezpieczeństwo", "Weryfikacja nie powiodła się — zapis anulowany.")
+            return
 
-        # otwórz plik po zapisaniu
         try:
-            os.startfile(FILENAME)
-        except Exception:
-            subprocess.Popen(["notepad", FILENAME])
+            entries = security.read_entries(self.fernet, PASSWORD_FILE)
+            next_nr = len(entries) + 1
+            line = f"{next_nr}. {domain} - {login} - {pwd}"
+            security.append_entry(self.fernet, PASSWORD_FILE, line)
+            messagebox.showinfo("Zapisano", f"Dodano wpis nr {next_nr} do {PASSWORD_FILE}")
+        except Exception as e:
+            messagebox.showerror("Błąd zapisu", f"Nie udało się zapisać do pliku:\n{e}")
 
+    def show_saved_entries(self):
+        if self.fernet is None:
+            messagebox.showerror("Błąd", "Szyfrowanie jest niedostępne.")
+            return
+        entries = security.read_entries(self.fernet, PASSWORD_FILE)
+        win = tk.Toplevel(self.root)
+        win.title("Zapisane wpisy")
+        win.geometry("700x420")
+        win.configure(bg="#202225")
 
-def check_update_now(self):
-    """Wywołuje ręczne sprawdzenie aktualizacji"""
-    try:
-        check_for_updates()  # nowa wersja updatera robi wszystko sama
-    except Exception as e:
-        messagebox.showerror("Błąd aktualizacji", f"Nie udało się sprawdzić aktualizacji:\n{e}")
+        text = tk.Text(win, bg="#2F3136", fg="white", insertbackground="white", font=("Consolas", 12))
+        text.pack(fill="both", expand=True, padx=10, pady=10)
+        text.insert("1.0", "\n".join(entries) + ("\n" if entries else "(brak wpisów)"))
+
+    def manual_update_check(self):
+        current = get_local_version()
+        manifest = check_for_updates(current, MANIFEST_URL)
+        if manifest:
+            ver = manifest.get("version", "?")
+            if messagebox.askyesno("Aktualizacja", f"Dostępna wersja {ver}. Zaktualizować teraz?"):
+                perform_update_flow(manifest)
+                self.version = get_local_version()
+                self.version_label.config(text=f"Wersja {self.version}")
+        else:
+            messagebox.showinfo("Aktualizacje", "Masz najnowszą wersję.")
