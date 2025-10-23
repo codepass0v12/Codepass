@@ -5,24 +5,20 @@ import tempfile
 import subprocess
 import sys
 import tkinter as tk
-from tkinter import messagebox
-
-
+from tkinter import messagebox, simpledialog
 
 from updater import check_for_updates, perform_update_flow, get_local_version
 import security  # szyfrowanie DPAPI + Fernet
 
-
 PASSWORD_FILE = "Hasła.enc"
-MANIFEST_URL = "https://raw.githubusercontent.com/codepass0v12/Codepass/main/update.json"
+MANIFEST_URL = "https://raw.githubusercontent.com/codepass0v12/Codepass/main/dist/update.json"
+PIN_FILE = "user_pin.txt"
 
 
-# ==================== 🔐 Weryfikacja Windows Hello ====================
+# ==================== 🔐 Windows Hello ====================
 
 def windows_authenticate_hello() -> bool:
-    """
-    Uruchamia Windows Hello w osobnym procesie, aby zawsze był na pierwszym planie.
-    """
+    """Uruchamia Windows Hello w osobnym procesie (na wierzchu)."""
     result = {"verified": False}
 
     hello_code = r'''
@@ -135,14 +131,24 @@ class CodePassGUI:
             selectcolor="#2F3136", activebackground="#202225"
         ).grid(row=0, column=3, padx=12)
 
-        # --- bezpieczeństwo ---
+        # --- bezpieczeństwo + PIN ---
+        security_frame = tk.Frame(root, bg="#202225")
+        security_frame.pack(pady=6)
+
         tk.Checkbutton(
-            root,
-            text="Większe bezpieczeństwo (wymagaj Windows Hello przy zapisie)",
+            security_frame,
+            text="Większe bezpieczeństwo (Windows Hello lub PIN przy zapisie)",
             variable=self.secure_var,
             font=("Segoe UI", 12), bg="#202225", fg="#00FFAA",
             selectcolor="#2F3136", activebackground="#202225"
-        ).pack(pady=6)
+        ).pack(side="left", padx=8)
+
+        self.pin_entry = tk.Entry(
+            security_frame, font=("Segoe UI", 12),
+            width=10, bg="#2F3136", fg="#00FFAA",
+            show="*", relief="flat", justify="center"
+        )
+        self.pin_entry.pack(side="left", padx=6)
 
         # --- przyciski ---
         btns = tk.Frame(root, bg="#202225")
@@ -225,39 +231,44 @@ class CodePassGUI:
 
     def save_password_secure(self):
         if self.fernet is None:
-            messagebox.showerror("Błąd", "Szyfrowanie jest niedostępne. Zapis anulowany.")
+            messagebox.showerror("Błąd", "Szyfrowanie niedostępne.")
             return
 
         domain = self.domain_entry.get().strip()
         login = self.login_entry.get().strip()
         pwd = self.password_entry.get().strip()
 
-        if not pwd:
-            messagebox.showwarning("Brak hasła", "Najpierw wygeneruj hasło.")
-            return
-        if not domain:
-            messagebox.showwarning("Brak domeny", "Podaj domenę/serwis (np. facebook.com).")
-            return
-        if not login:
-            messagebox.showwarning("Brak loginu", "Podaj login lub e-mail.")
+        if not (domain and login and pwd):
+            messagebox.showwarning("Błąd", "Uzupełnij wszystkie pola przed zapisem.")
             return
 
-        if self.secure_var.get() and not windows_authenticate_hello():
-            messagebox.showerror("Bezpieczeństwo", "Weryfikacja nie powiodła się — zapis anulowany.")
-            return
+        if self.secure_var.get():
+            pin = self.pin_entry.get().strip()
+            if pin:
+                if os.path.exists(PIN_FILE):
+                    with open(PIN_FILE, "r") as f:
+                        saved_pin = f.read().strip()
+                    if pin != saved_pin:
+                        messagebox.showerror("PIN", "Nieprawidłowy PIN. Zapis anulowany.")
+                        return
+                else:
+                    with open(PIN_FILE, "w") as f:
+                        f.write(pin)
+                    messagebox.showinfo("PIN", "Nowy PIN został zapisany.")
+            else:
+                if not windows_authenticate_hello():
+                    messagebox.showerror("Bezpieczeństwo", "Nie potwierdzono tożsamości — zapis anulowany.")
+                    return
 
-        try:
-            entries = security.read_entries(self.fernet, PASSWORD_FILE)
-            next_nr = len(entries) + 1
-            line = f"{next_nr}. {domain} - {login} - {pwd}"
-            security.append_entry(self.fernet, PASSWORD_FILE, line)
-            messagebox.showinfo("Zapisano", f"Dodano wpis nr {next_nr} do {PASSWORD_FILE}")
-        except Exception as e:
-            messagebox.showerror("Błąd zapisu", f"Nie udało się zapisać do pliku:\n{e}")
+        entries = security.read_entries(self.fernet, PASSWORD_FILE)
+        next_nr = len(entries) + 1
+        line = f"{next_nr}. {domain} - {login} - {pwd}"
+        security.append_entry(self.fernet, PASSWORD_FILE, line)
+        messagebox.showinfo("Zapisano", f"Dodano wpis nr {next_nr}")
 
     def show_saved_entries(self):
         if self.fernet is None:
-            messagebox.showerror("Błąd", "Szyfrowanie jest niedostępne.")
+            messagebox.showerror("Błąd", "Szyfrowanie niedostępne.")
             return
         entries = security.read_entries(self.fernet, PASSWORD_FILE)
         win = tk.Toplevel(self.root)

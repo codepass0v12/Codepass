@@ -1,213 +1,154 @@
 import os
 import sys
-import time
 import shutil
 import zipfile
 import subprocess
+import hashlib
+import base64
 import json
+import time
 from datetime import datetime
-from typing import Optional
-
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
 # ======================================
-# 📁 KONFIGURACJA ŚCIEŻEK
+# KONFIGURACJA
 # ======================================
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SRC_DIR     = os.path.join(PROJECT_DIR, "src")
-BUILD_DIR   = os.path.join(PROJECT_DIR, "build")
-DIST_DIR    = os.path.join(PROJECT_DIR, "dist")
-ASSETS_DIR  = os.path.join(PROJECT_DIR, "assets")
+SRC_DIR = os.path.join(PROJECT_DIR, "src")
+DIST_DIR = os.path.join(PROJECT_DIR, "dist")
+BUILD_DIR = os.path.join(PROJECT_DIR, "build")
+ASSETS_DIR = os.path.join(PROJECT_DIR, "assets")
 
 PRIVATE_KEY_PATH = os.path.join(PROJECT_DIR, "private_key.pem")
-PUBLIC_KEY_PATH  = os.path.join(PROJECT_DIR, "public_key.pem")
-VERSION_PATH     = os.path.join(PROJECT_DIR, "version.txt")
+PUBLIC_KEY_PATH = os.path.join(PROJECT_DIR, "public_key.pem")
+VERSION_PATH = os.path.join(PROJECT_DIR, "version.txt")
 
 UPDATE_BASE_URL = "https://raw.githubusercontent.com/codepass0v12/Codepass/main/dist"
-GITHUB_REPO     = "codepass0v12/Codepass"
 
 # ======================================
-# 🧩 FUNKCJE POMOCNICZE
+# FUNKCJE POMOCNICZE
 # ======================================
 
-def ensure_dirs():
-    os.makedirs(DIST_DIR, exist_ok=True)
-    os.makedirs(BUILD_DIR, exist_ok=True)
-
-def read_version() -> str:
-    """Czyta aktualną wersję lub tworzy plik jeśli go nie ma."""
+def read_version():
+    """Odczytuje aktualną wersję z version.txt."""
     if not os.path.exists(VERSION_PATH):
-        with open(VERSION_PATH, "w", encoding="utf-8") as f:
-            f.write("1.0.0")
-        print("ℹ️  Utworzono version.txt z wersją 1.0.0")
+        raise FileNotFoundError(f"❌ Brak pliku version.txt w {VERSION_PATH}!")
     with open(VERSION_PATH, "r", encoding="utf-8") as f:
         return f.read().strip()
 
-def bump_version_interactive() -> str:
-    """
-    Pozwala ręcznie ustawić nowy numer wersji (np. 2.1.0).
-    Jeśli użytkownik nic nie wpisze, zwiększa automatycznie patch.
-    """
+
+def set_version():
+    """Pozwala wpisać wersję ręcznie, np. 2.1.0"""
     current = read_version()
-    print(f"📘 Aktualna wersja: {current}")
-    user_input = input("➡️  Podaj nowy numer wersji (np. 2.1.0) lub naciśnij Enter, aby automatycznie zwiększyć patch: ").strip()
-
-    if not user_input:
-        # automatyczne zwiększenie patch
-        try:
-            major, minor, patch = map(int, current.split("."))
-            patch += 1
-            new_version = f"{major}.{minor}.{patch}"
-        except Exception:
-            new_version = "1.0.0"
-        print(f"⬆️  Automatycznie ustawiono nową wersję: {new_version}")
-    else:
-        # walidacja formatu x.y.z
-        parts = user_input.split(".")
-        if len(parts) != 3 or not all(p.isdigit() for p in parts):
-            raise ValueError("❌ Niepoprawny format wersji! Użyj formatu np. 2.1.0")
-        new_version = user_input
-        print(f"✅ Ustawiono wersję: {new_version}")
-
-    # zapis do pliku version.txt
+    print(f"📄 Aktualna wersja: {current}")
+    new_version = input("✏️  Podaj nową wersję (ENTER aby zostawić tę samą): ").strip()
+    if not new_version:
+        new_version = current
     with open(VERSION_PATH, "w", encoding="utf-8") as f:
         f.write(new_version)
-
+    print(f"✅ Ustawiono wersję: {new_version}")
     return new_version
 
-def run(cmd: list, cwd: Optional[str] = None) -> subprocess.CompletedProcess:
-    """Uruchamia polecenie i zwraca wynik."""
-    print("▶", " ".join(cmd))
-    return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
-
-# ======================================
-# ⚙️ PYINSTALLER + BUILD EXE
-# ======================================
-
-def ensure_pyinstaller():
-    """Instaluje PyInstaller jeśli brak."""
-    res = run([sys.executable, "-m", "pip", "show", "pyinstaller"])
-    if res.returncode != 0:
-        print("ℹ️  Instaluję PyInstaller...")
-        install = run([sys.executable, "-m", "pip", "install", "-U", "pyinstaller"])
-        if install.returncode != 0:
-            print(install.stderr)
-            raise RuntimeError("Nie udało się zainstalować PyInstaller.")
-
-def wait_for_exe(exe_path: str, timeout: int = 180, stable_checks: int = 3):
-    """Czeka aż EXE się pojawi i ustabilizuje rozmiar."""
-    print(f"⏳ Oczekiwanie na {exe_path} (do {timeout}s)...")
-    last_size = -1
-    stable = 0
-    start = time.time()
-    while time.time() - start < timeout:
-        if os.path.exists(exe_path):
-            try:
-                size = os.path.getsize(exe_path)
-                if size == last_size:
-                    stable += 1
-                    if stable >= stable_checks:
-                        print("✅ EXE gotowe.")
-                        return
-                else:
-                    stable = 0
-                    last_size = size
-            except Exception:
-                pass
-        time.sleep(1)
-    raise TimeoutError(f"Nie udało się zbudować {exe_path} w czasie {timeout}s")
-
-def build_exe() -> str:
-    """Buduje CodePass.exe i czeka aż będzie gotowy."""
-    ensure_pyinstaller()
-
-    src_path = os.path.join(SRC_DIR, "main.py")
-    icon_path = os.path.join(ASSETS_DIR, "logo.ico")
-    exe_path = os.path.join(DIST_DIR, "CodePass.exe")
-
-    if not os.path.exists(src_path):
-        raise FileNotFoundError(f"❌ Brak pliku źródłowego: {src_path}")
-
-    if os.path.exists(exe_path):
-        try:
-            os.remove(exe_path)
-        except Exception:
-            pass
-
-    print("== 🔨 Budowanie CodePass.exe ==")
-    cmd = [
-        sys.executable, "-m", "PyInstaller",
-        "--onefile",
-        "--noconsole",
-        "--clean",
-        "--name", "CodePass",
-        "--hidden-import=winrt.windows.security.credentials.ui",
-        "--hidden-import=winrt.windows.foundation",
-        "--hidden-import=winrt.windows.security.credentials"
-    ]
-    if os.path.exists(icon_path):
-        cmd += ["--icon", icon_path]
-    cmd += [src_path]
-
-    result = run(cmd, cwd=PROJECT_DIR)
-    if result.returncode != 0:
-        print("❌ Błąd PyInstaller:")
-        print(result.stderr)
-        raise RuntimeError("Kompilacja nie powiodła się.")
-
-    wait_for_exe(exe_path)
-    print(f"✅ Utworzono {exe_path}")
-    return exe_path
-
-# ======================================
-# 📦 PACZKOWANIE I PODPIS
-# ======================================
 
 def prepare_build_folder(version: str):
-    """Czyści folder build/ i kopiuje pliki źródłowe."""
-    print(f"== 📦 Przygotowywanie build ({version}) ==")
-
+    """Czyści i kopiuje źródła do folderu build/"""
+    print(f"== 📦 Przygotowywanie build/ dla wersji {version} ==")
     if os.path.exists(BUILD_DIR):
         shutil.rmtree(BUILD_DIR)
     os.makedirs(BUILD_DIR, exist_ok=True)
 
-    for name in os.listdir(SRC_DIR):
-        src = os.path.join(SRC_DIR, name)
-        dst = os.path.join(BUILD_DIR, name)
-        if os.path.isfile(src):
-            shutil.copy2(src, dst)
+    for item in os.listdir(SRC_DIR):
+        src_path = os.path.join(SRC_DIR, item)
+        dst_path = os.path.join(BUILD_DIR, item)
+        if os.path.isfile(src_path):
+            shutil.copy2(src_path, dst_path)
 
     shutil.copy2(VERSION_PATH, BUILD_DIR)
-    print("📁 build/ gotowy.")
+    print("📂 Folder build/ gotowy.")
+
+
+def build_exe():
+    """Buduje CodePass.exe i czeka aż proces się zakończy."""
+    print("== 🔨 Budowanie CodePass.exe ==")
+
+    src_path = os.path.join(SRC_DIR, "main.py")
+    icon_path = os.path.join(ASSETS_DIR, "logo.ico")
+
+    if not os.path.exists(src_path):
+        raise FileNotFoundError(f"❌ Nie znaleziono pliku: {src_path}")
+
+    pyinstaller_cmd = [
+        "pyinstaller",
+        "--onefile",
+        "--noconsole",
+        "--clean",
+        "--paths", SRC_DIR,
+        "--hidden-import=updater",
+        "--hidden-import=winrt.windows.security.credentials.ui",
+        "--hidden-import=winrt.windows.foundation",
+        "--hidden-import=winrt.windows.security.credentials",
+        "--name", "CodePass",
+        "--icon", icon_path if os.path.exists(icon_path) else "NONE",
+        src_path
+    ]
+
+    result = subprocess.run(pyinstaller_cmd)
+    if result.returncode != 0:
+        raise RuntimeError("❌ Błąd podczas kompilacji EXE.")
+
+    exe_path = os.path.join(PROJECT_DIR, "dist", "CodePass.exe")
+    for _ in range(10):
+        if os.path.exists(exe_path):
+            break
+        print("⏳ Oczekiwanie na wygenerowanie EXE...")
+        time.sleep(1)
+
+    if not os.path.exists(exe_path):
+        raise FileNotFoundError("❌ Nie znaleziono CodePass.exe po kompilacji!")
+
+    print("✅ EXE zbudowany.")
+    return exe_path
+
 
 def create_zip(version: str) -> str:
-    zip_path = os.path.join(DIST_DIR, f"update_{version}.zip")
-    print(f"== 📦 Tworzenie ZIP: {zip_path} ==")
+    """Tworzy ZIP z plikami aplikacji i wymusza .zip."""
+    os.makedirs(DIST_DIR, exist_ok=True)
+    zip_name = f"update_{version}.zip"
+    zip_path = os.path.join(DIST_DIR, zip_name)
+
+    print(f"== 📦 Tworzenie {zip_name} ==")
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-        for root, _, files in os.walk(BUILD_DIR):
-            for f in files:
-                ap = os.path.join(root, f)
-                rp = os.path.relpath(ap, BUILD_DIR)
-                zipf.write(ap, rp)
-    print("✅ ZIP utworzony.")
+        for foldername, _, filenames in os.walk(BUILD_DIR):
+            for filename in filenames:
+                filepath = os.path.join(foldername, filename)
+                relpath = os.path.relpath(filepath, BUILD_DIR)
+                zipf.write(filepath, relpath)
+
+    print(f"✅ Utworzono ZIP: {zip_path}")
     return zip_path
 
+
 def sign_zip(zip_path: str) -> str:
+    """Podpisuje ZIP przy użyciu klucza RSA."""
     sig_path = zip_path.replace(".zip", ".sig")
-    print("🔏 Podpisywanie ZIP...")
+    print("🔏 Podpisywanie archiwum...")
+
     with open(PRIVATE_KEY_PATH, "rb") as key_file:
         private_key = serialization.load_pem_private_key(key_file.read(), password=None)
     with open(zip_path, "rb") as f:
         data = f.read()
     signature = private_key.sign(data, padding.PKCS1v15(), hashes.SHA256())
-    with open(sig_path, "wb") as f:
-        f.write(signature)
-    print(f"✅ Podpis zapisany jako {sig_path}")
+    with open(sig_path, "wb") as sig_file:
+        sig_file.write(signature)
+
+    print(f"✅ Podpis zapisany jako: {sig_path}")
     return sig_path
 
+
 def verify_signature(zip_path: str, sig_path: str):
+    """Weryfikuje podpis ZIP."""
     print("🔍 Weryfikacja podpisu...")
     with open(PUBLIC_KEY_PATH, "rb") as key_file:
         public_key = serialization.load_pem_public_key(key_file.read())
@@ -216,10 +157,12 @@ def verify_signature(zip_path: str, sig_path: str):
     with open(sig_path, "rb") as f:
         signature = f.read()
     public_key.verify(signature, data, padding.PKCS1v15(), hashes.SHA256())
-    print("✅ Podpis poprawny.")
+    print("✅ Podpis ZIP poprawny.")
 
-def create_manifest(version: str, zip_path: str, sig_path: str) -> str:
-    print("📝 Tworzenie update.json...")
+
+def create_manifest(version: str, zip_path: str, sig_path: str):
+    """Tworzy plik update.json z pełnymi linkami."""
+    print("📝 Tworzenie manifestu...")
     zip_name = os.path.basename(zip_path)
     sig_name = os.path.basename(sig_path)
     manifest = {
@@ -228,18 +171,18 @@ def create_manifest(version: str, zip_path: str, sig_path: str) -> str:
         "download_url": f"{UPDATE_BASE_URL}/{zip_name}",
         "sig_url": f"{UPDATE_BASE_URL}/{sig_name}"
     }
+
     manifest_path = os.path.join(DIST_DIR, "update.json")
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=4)
-    print(f"✅ Zapisano manifest: {manifest_path}")
+    print(f"✅ Manifest zapisany: {manifest_path}")
     return manifest_path
 
-# ======================================
-# 🧭 GIT PUSH
-# ======================================
 
 def git_push(version: str):
-    print("🚀 Wysyłanie na GitHub...")
+    """Wysyła build na GitHub."""
+    print("🚀 Wysyłanie aktualizacji na GitHub...")
+
     cmds = [
         ["git", "add", "."],
         ["git", "commit", "-m", f"build: CodePass v{version}"],
@@ -247,22 +190,31 @@ def git_push(version: str):
         ["git", "tag", f"v{version}"],
         ["git", "push", "--tags"]
     ]
+
     for cmd in cmds:
-        res = run(cmd, cwd=PROJECT_DIR)
-        if res.returncode != 0:
-            if "nothing to commit" in (res.stdout + res.stderr).lower():
-                continue
-            print("⚠️ Błąd:", res.stderr or res.stdout)
+        result = subprocess.run(cmd)
+        if result.returncode != 0:
+            print(f"⚠️ Komenda nie powiodła się: {' '.join(cmd)}")
             break
-    print("✅ Wysłano nową wersję.")
+
+    print("✅ Aktualizacja wysłana na GitHub.")
+
+
+def open_dist_folder():
+    """Otwiera folder dist w Eksploratorze."""
+    try:
+        subprocess.Popen(f'explorer "{DIST_DIR}"')
+    except Exception:
+        pass
 
 # ======================================
-# 🚀 GŁÓWNY PROCES
+# GŁÓWNY PROCES
 # ======================================
 
 def main():
-    ensure_dirs()
-    version = bump_version_interactive()
+    print("🚧 Uruchamianie procesu build CodePass...")
+
+    version = set_version()
     print(f"== Build CodePass v{version} ==")
 
     build_exe()
@@ -271,14 +223,16 @@ def main():
     sig_path = sign_zip(zip_path)
     verify_signature(zip_path, sig_path)
     create_manifest(version, zip_path, sig_path)
-    git_push(version)
 
-    try:
-        subprocess.Popen(['explorer', DIST_DIR])
-    except Exception:
-        pass
+    choice = input("📦 Wysłać na GitHub? (ENTER = tak / n = tylko lokalnie): ").strip().lower()
+    if choice != "n":
+        git_push(version)
+        print("✅ Wysłano nową wersję na GitHub.")
+    else:
+        print("🧪 Tryb testowy — pliki zostały zbudowane tylko lokalnie.")
 
-    print("🎉 GOTOWE! Wszystkie pliki znajdują się w:", DIST_DIR)
+    open_dist_folder()
+    print(f"🎉 GOTOWE! CodePass v{version} zbudowany pomyślnie.")
 
 if __name__ == "__main__":
     main()
