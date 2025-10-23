@@ -1,5 +1,4 @@
 import os
-import sys
 import shutil
 import zipfile
 import subprocess
@@ -16,7 +15,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC_DIR = os.path.join(PROJECT_DIR, "src")
 DIST_DIR = os.path.join(PROJECT_DIR, "dist")
-BUILD_DIR = os.path.join(PROJECT_DIR, "build_temp")  # nie ruszamy src
+BUILD_DIR = os.path.join(PROJECT_DIR, "build_temp")  # tymczasowy katalog
 ASSETS_DIR = os.path.join(PROJECT_DIR, "assets")
 
 PRIVATE_KEY_PATH = os.path.join(PROJECT_DIR, "private_key.pem")
@@ -51,11 +50,10 @@ def ask_version():
     return new_version
 
 def safe_prepare_build(version: str):
-    """Tworzy tymczasowy folder build_temp bez usuwania źródeł."""
+    """Tworzy folder build_temp bez usuwania źródeł."""
     print(f"== 📂 Przygotowywanie build_temp dla wersji {version} ==")
     os.makedirs(BUILD_DIR, exist_ok=True)
 
-    # Kopiujemy pliki ze src (ale nie usuwamy oryginałów!)
     for foldername, _, filenames in os.walk(SRC_DIR):
         for filename in filenames:
             src = os.path.join(foldername, filename)
@@ -117,6 +115,26 @@ def create_manifest(version: str, zip_path: str, sig_path: str):
     print(f"✅ Manifest utworzony: {manifest_path}")
     return manifest_path
 
+from typing import Optional
+
+def find_gh_executable() -> Optional[str]:
+
+    """Odnajduje GitHub CLI (gh.exe) na Windowsie."""
+    gh_env = os.environ.get("GH_EXE")
+    if gh_env and os.path.isfile(gh_env):
+        return gh_env
+    gh_path = shutil.which("gh")
+    if gh_path and os.path.isfile(gh_path):
+        return gh_path
+    candidates = [
+        r"C:\Program Files\GitHub CLI\gh.exe",
+        r"C:\Program Files (x86)\GitHub CLI\gh.exe",
+    ]
+    for c in candidates:
+        if os.path.isfile(c):
+            return c
+    return None
+
 def build_exe():
     """Buduje plik CodePass.exe"""
     print("🔨 Budowanie CodePass.exe...")
@@ -143,29 +161,39 @@ def build_exe():
     sleep(2)
 
 def git_push_and_release(version: str):
-    """Commituje, taguje i publikuje release na GitHubie."""
+    """Commituje, taguje i (jeśli dostępny) publikuje release na GitHubie."""
     print("🚀 Publikowanie aktualizacji na GitHub...")
 
     subprocess.run(["git", "add", "."], check=False)
     subprocess.run(["git", "commit", "-m", f"build: CodePass v{version}"], check=False)
     subprocess.run(["git", "push", "origin", "main"], check=False)
 
-    subprocess.run(["git", "tag", f"v{version}"], check=False)
-    subprocess.run(["git", "push", "--tags"], check=False)
+    tag_name = f"v{version}"
+    subprocess.run(["git", "tag", tag_name], check=False)
+    subprocess.run(["git", "push", "origin", tag_name], check=False)
 
-    # Automatyczny release (jeśli masz zainstalowany `gh`)
-    gh_status = subprocess.run(["gh", "--version"], capture_output=True, text=True)
-    if gh_status.returncode == 0:
-        print("📦 Tworzenie release na GitHubie...")
-        subprocess.run([
-            "gh", "release", "create", f"v{version}",
-            os.path.join(DIST_DIR, f"update_{version}.zip"),
-            os.path.join(DIST_DIR, f"update_{version}.sig"),
-            os.path.join(DIST_DIR, "update.json"),
-            "--notes", f"Automatycznie zbudowana wersja CodePass v{version}"
-        ])
-    else:
-        print("⚠️ GitHub CLI (gh) nie jest dostępny – pomiń release.")
+    gh = find_gh_executable()
+    if not gh:
+        print("⚠️  gh.exe nie znaleziono — pomijam Release.")
+        return
+
+    auth_check = subprocess.run([gh, "auth", "status"], capture_output=True, text=True)
+    if auth_check.returncode != 0:
+        print("⚠️  gh dostępny, ale nie zalogowano (uruchom: gh auth login). Pomijam Release.")
+        return
+
+    zip_file = os.path.join(DIST_DIR, f"update_{version}.zip")
+    sig_file = os.path.join(DIST_DIR, f"update_{version}.sig")
+    manifest_file = os.path.join(DIST_DIR, "update.json")
+
+    print("📦 Tworzenie Release na GitHubie...")
+    subprocess.run([
+        gh, "release", "create", tag_name,
+        zip_file, sig_file, manifest_file,
+        "--title", f"CodePass v{version}",
+        "--notes", f"Automatyczny release wersji {version}."
+    ])
+    print("✅ Release opublikowany.")
 
 def open_dist_folder():
     try:
@@ -180,16 +208,13 @@ def open_dist_folder():
 def main():
     print("=== 🧱 CodePass Builder ===")
     version = ask_version()
-
     build_exe()
     safe_prepare_build(version)
     zip_path = create_zip(version)
     sig_path = sign_zip(zip_path)
     verify_signature(zip_path, sig_path)
     create_manifest(version, zip_path, sig_path)
-
     git_push_and_release(version)
-
     open_dist_folder()
     print(f"🎉 GOTOWE! CodePass v{version} zbudowany pomyślnie.")
 
