@@ -1,30 +1,38 @@
+import os
+import sys
 import tkinter as tk
 from tkinter import messagebox
+
+from updater import get_local_version, check_for_updates, perform_update_flow
 from gui import CodePassGUI
-from updater import check_for_updates, perform_update_flow, get_local_version
 
-
-APP_VERSION = get_local_version()
+# 🔹 Adres manifestu z GitHuba
 MANIFEST_URL = "https://raw.githubusercontent.com/codepass0v12/Codepass/main/update.json"
 
 
 def main():
-    # 🔄 sprawdzanie aktualizacji przy starcie
+    # 🔸 Odczyt lokalnej wersji
+    app_version = get_local_version()
+    print(f"Uruchamianie CodePass v{app_version}...")
+
+    # 🔸 Tworzenie głównego okna
+    root = tk.Tk()
+    root.withdraw()  # ukryj białe okno na czas aktualizacji
+
+    # 🔸 Sprawdzenie aktualizacji
     try:
-        manifest = check_for_updates(APP_VERSION, MANIFEST_URL)
+        manifest = check_for_updates(app_version, MANIFEST_URL)
         if manifest:
             perform_update_flow(manifest)
+            return  # zakończ — nowa wersja sama się uruchomi
     except Exception as e:
-        print(f"[Aktualizacja] Błąd sprawdzania aktualizacji: {e}")
+        print(f"[Błąd aktualizacji] {e}")
+        messagebox.showwarning("Aktualizacja", f"Nie udało się sprawdzić aktualizacji:\n{e}")
 
-    # 🖥️ GUI
-    root = tk.Tk()
-    app = CodePassGUI(root, APP_VERSION)
-
-    # Pełny ekran, ale da się minimalizować
-    root.state("zoomed")
-    root.minsize(900, 600)
-
+    # 🔸 Pokazanie głównego okna aplikacji
+    root.deiconify()
+    app = CodePassGUI(root, app_version)
+    root.state("zoomed")  # pełny ekran, ale można minimalizować
     root.mainloop()
 
 
