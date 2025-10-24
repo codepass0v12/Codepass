@@ -6,6 +6,7 @@ import zipfile
 import tempfile
 import requests
 import subprocess
+import shutil
 from tkinter import messagebox
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
@@ -15,18 +16,18 @@ from cryptography.hazmat.primitives.asymmetric import padding
 # =======================================
 PUBLIC_KEY_PEM = b"""
 -----BEGIN PUBLIC KEY-----
-MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAs3zRigkJ22weSHhiI+qk
-k5pirPfGuuDrokQtxJSol7EKFcHUn5dkuhxa8PNVKpyiw5xZ5pSrFr/zQOlSlgmV
-ogRLKO1KODzBYyRt24h7+46Ee/ngwrSAe6e14JZVLg5JMpu9nuBs+63vC0HqCijr
-yi7WhRQg89mtW7v1JiS2zdtuilIbhX8IE9/QFpPLI92guCwEmgdDBkt8/MrIP4Cc
-IG8HYdhWd3i9fk/SAFqmLwVi/Mngv8LFT1tAfQOb1E/IFgaton7SqIX7xJs8brza
-ZQEqTZG3EQOjzSpwr6C79wfSfW2UY+uUIprrAUKd4UALPFOSFmBZyoMWvnHj1RKp
-CJ4SiSWsn1C822pl9HagExfwch3st+/A5VXPvP02K1Eq5N++KzI9rYAB4ARsrQbd
-bZMo7YJxjJN67OkNugHHHHuNgP/RlTG8lqQCEnO1A5PgRwdDW1ymgHrw2mZSZE2F
-2hsCCBbFUN2n/RfGSNOLKqTDpWT2/CqAiJwEfAArwwwRhcH74Pi6dM8ohwWlkMbS
-O1tl4fGYNhiLZ0BZkJIsJyV7ulFyrRb8FaVZEGqeiPxRka1IsiEHoKuSqHdEPnDV
-Rh4JjXlJKN/D3ksNmFNWWEaaajxAUHZUvZbxud8fjbXKpezYlPvccvboyFr7ecY+
-EHCGxjhG7qbUrvYhLdeQi8ECAwEAAQ==
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA0udN0P4awsbCVEUHkajR
+TBYfF9Qq62QoTvajWu6c6KzPqy1eC9OoDMXzePEsJY9kRwCfiLsIq4P85Hb/otEk
+uN5o4ZaNEyVTNffBkAtqTocTlT+2ncdS6ViZ3DVu5+FhhOtT58tDxzbyS6Gh5iPh
+rU7bQDjWuzTlTnFUP2a7D+cFovZZ48ZHTlDRZ6ejQXb5cGQJQUK1xCppfz7c4nWS
+d9iI/wAGevfNlu/GmOTxrTDH1mNp3NqjEYvdEu1wzu0cz8By+40uO6yM/6/zqmBG
+F1J8/G/QSHNAy3VZPk8FgqewZugIgrWY8rMLnCsJHNEy1QPgLJRjsHburjnzlpOr
+HwjxEcEJup54qNEuKkOAIXQ3FgfWNkgnhqc5RkR/F7mVWvC1IZ2bwshnJ3ecjwkw
+J/SLn0UlSYoQXhqnPtUjgFFD+FbBeMIPVjLgZZ4IIBjUABwBSm9iil2esCC7LARZ
+ZHjfG+dLsxSU2eu1XB8K3NTrpfWQbBV4HKxjhuqMe6v4nAnDdBrojCC3KR5N3etL
+KBjTDDR5ek123BhlTXntQrJa39aUseXNBAdVQ5ZMW0t5Kk3xrkgk+XAPYtclzXMS
+CTo/lCD+aqRRrTM0m5H24itlSq3oPJ8xweas+fO37uKLS6zRChuVIvg636ZSAWm9
+6dX2P8geX7dnBuma/ncDL0cCAwEAAQ==
 -----END PUBLIC KEY-----
 """
 
@@ -46,7 +47,7 @@ def verify_zip_signature(zip_bytes: bytes, signature_b64: str) -> bool:
 
 
 # =======================================
-# 📄 Wersja lokalna aplikacji
+# 📄 Odczyt lokalnej wersji
 # =======================================
 def get_local_version():
     try:
@@ -74,6 +75,7 @@ def check_for_updates(current_version: str, manifest_url: str):
     if latest_version == current_version:
         print("[Aktualizacja] Brak nowych wersji.")
         return None
+
     return manifest
 
 
@@ -86,7 +88,7 @@ def perform_update_flow(manifest: dict):
     sig_url = manifest.get("sig_url")
 
     if not download_url:
-        messagebox.showerror("Błąd", "Nie znaleziono linku do aktualizacji w manifest.json.")
+        messagebox.showerror("Błąd", "Nie znaleziono linku do aktualizacji w update.json.")
         return
 
     try:
@@ -99,16 +101,15 @@ def perform_update_flow(manifest: dict):
             sig_data = requests.get(sig_url, timeout=10).content
             sig_b64 = base64.b64encode(sig_data).decode()
             if not verify_zip_signature(zip_data, sig_b64):
-                messagebox.showerror("Błąd", "Niepoprawny podpis aktualizacji. Anulowano.")
+                messagebox.showerror("Błąd", "Niepoprawny podpis aktualizacji. Aktualizacja została anulowana.")
                 return
 
         # 🧩 Przygotowanie katalogów
         app_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
         tmp_dir = os.path.join(tempfile.gettempdir(), f"CodePass_Update_{version}")
         os.makedirs(tmp_dir, exist_ok=True)
-        zip_path = os.path.join(tmp_dir, f"update_{version}.zip")
 
-        # 📦 Zapisanie ZIP
+        zip_path = os.path.join(tmp_dir, f"update_{version}.zip")
         with open(zip_path, "wb") as f:
             f.write(zip_data)
 
@@ -127,6 +128,7 @@ def perform_update_flow(manifest: dict):
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 try:
                     if os.path.exists(dst):
+                        os.chmod(dst, 0o666)  # usuń blokadę zapisu
                         os.remove(dst)
                     shutil.move(src, dst)
                 except PermissionError:
@@ -134,14 +136,15 @@ def perform_update_flow(manifest: dict):
                 except Exception as e:
                     print(f"⚠️ Błąd kopiowania {dst}: {e}")
 
-        # 🧹 Sprzątanie
+        # 🧹 Sprzątanie tymczasowych plików
         try:
-            shutil.rmtree(tmp_dir)
+            shutil.rmtree(tmp_dir, ignore_errors=True)
         except Exception:
             pass
 
-        # ✍️ Zapis nowej wersji
-        with open(os.path.join(app_dir, "version.txt"), "w", encoding="utf-8") as vf:
+        # ✍️ Aktualizacja wersji
+        version_file = os.path.join(app_dir, "version.txt")
+        with open(version_file, "w", encoding="utf-8") as vf:
             vf.write(version)
 
         messagebox.showinfo("Aktualizacja", f"Pomyślnie zaktualizowano do wersji {version}!")
@@ -149,19 +152,19 @@ def perform_update_flow(manifest: dict):
         # 🚀 Restart aplikacji
         exe_path = os.path.join(app_dir, os.path.basename(sys.argv[0]))
 
-        # 🔓 Usunięcie blokady Windows (jeśli EXE pochodzi z internetu)
+        # 🔓 Odblokowanie EXE (Windows flag "z internetu")
         try:
-            subprocess.run(["powershell", "Unblock-File", exe_path], check=False)
+            subprocess.run(["powershell", "-Command", f"Unblock-File '{exe_path}'"], check=False)
         except Exception:
             pass
 
-        # 🔁 Uruchom ponownie
+        # 🔁 Uruchom ponownie aplikację
         try:
-            subprocess.Popen([exe_path])
+            subprocess.Popen([exe_path], close_fds=True)
             os._exit(0)
         except Exception as e:
             messagebox.showwarning(
-                "Restart",
+                "Restart wymagany",
                 f"Nie udało się uruchomić aplikacji automatycznie:\n{e}\n"
                 "Uruchom CodePass.exe ręcznie z folderu instalacji."
             )
