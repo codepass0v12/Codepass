@@ -1,0 +1,628 @@
+{
+  "__bytecode.const": {
+    "blob_name": ".bytecode",
+    "blob_size": 3989092,
+    "input_size": 4010440
+  },
+  "__constants.const": {
+    "blob_name": "",
+    "blob_size": 832,
+    "input_size": 2147
+  },
+  "module.__main__.const": {
+    "blob_name": "__main__",
+    "blob_size": 1132,
+    "input_size": 1906
+  },
+  "module.certifi.const": {
+    "blob_name": "certifi",
+    "blob_size": 290,
+    "input_size": 556
+  },
+  "module.certifi.core.const": {
+    "blob_name": "certifi.core",
+    "blob_size": 432,
+    "input_size": 842
+  },
+  "module.charset_normalizer.api.const": {
+    "blob_name": "charset_normalizer.api",
+    "blob_size": 8185,
+    "input_size": 8749
+  },
+  "module.charset_normalizer.cd.const": {
+    "blob_name": "charset_normalizer.cd",
+    "blob_size": 5550,
+    "input_size": 6557
+  },
+  "module.charset_normalizer.const": {
+    "blob_name": "charset_normalizer",
+    "blob_size": 1657,
+    "input_size": 2056
+  },
+  "module.charset_normalizer.constant.const": {
+    "blob_name": "charset_normalizer.constant",
+    "blob_size": 20309,
+    "input_size": 26441
+  },
+  "module.charset_normalizer.legacy.const": {
+    "blob_name": "charset_normalizer.legacy",
+    "blob_size": 1337,
+    "input_size": 1841
+  },
+  "module.charset_normalizer.models.const": {
+    "blob_name": "charset_normalizer.models",
+    "blob_size": 5983,
+    "input_size": 7990
+  },
+  "module.charset_normalizer.utils.const": {
+    "blob_name": "charset_normalizer.utils",
+    "blob_size": 4468,
+    "input_size": 6034
+  },
+  "module.charset_normalizer.version.const": {
+    "blob_name": "charset_normalizer.version",
+    "blob_size": 197,
+    "input_size": 391
+  },
+  "module.cryptography.__about__.const": {
+    "blob_name": "cryptography.__about__",
+    "blob_size": 283,
+    "input_size": 502
+  },
+  "module.cryptography.const": {
+    "blob_name": "cryptography",
+    "blob_size": 357,
+    "input_size": 593
+  },
+  "module.cryptography.exceptions.const": {
+    "blob_name": "cryptography.exceptions",
+    "blob_size": 851,
+    "input_size": 1373
+  },
+  "module.cryptography.fernet.const": {
+    "blob_name": "cryptography.fernet",
+    "blob_size": 3363,
+    "input_size": 4821
+  },
+  "module.cryptography.hazmat._oid.const": {
+    "blob_name": "cryptography.hazmat._oid",
+    "blob_size": 7561,
+    "input_size": 12912
+  },
+  "module.cryptography.hazmat.backends.const": {
+    "blob_name": "cryptography.hazmat.backends",
+    "blob_size": 525,
+    "input_size": 871
+  },
+  "module.cryptography.hazmat.backends.openssl.backend.const": {
+    "blob_name": "cryptography.hazmat.backends.openssl.backend",
+    "blob_size": 4311,
+    "input_size": 6567
+  },
+  "module.cryptography.hazmat.backends.openssl.const": {
+    "blob_name": "cryptography.hazmat.backends.openssl",
+    "blob_size": 608,
+    "input_size": 957
+  },
+  "module.cryptography.hazmat.bindings.const": {
+    "blob_name": "cryptography.hazmat.bindings",
+    "blob_size": 409,
+    "input_size": 683
+  },
+  "module.cryptography.hazmat.bindings.openssl._conditional.const": {
+    "blob_name": "cryptography.hazmat.bindings.openssl._conditional",
+    "blob_size": 3156,
+    "input_size": 4277
+  },
+  "module.cryptography.hazmat.bindings.openssl.binding.const": {
+    "blob_name": "cryptography.hazmat.bindings.openssl.binding",
+    "blob_size": 2682,
+    "input_size": 3784
+  },
+  "module.cryptography.hazmat.bindings.openssl.const": {
+    "blob_name": "cryptography.hazmat.bindings.openssl",
+    "blob_size": 520,
+    "input_size": 821
+  },
+  "module.cryptography.hazmat.const": {
+    "blob_name": "cryptography.hazmat",
+    "blob_size": 323,
+    "input_size": 583
+  },
+  "module.cryptography.hazmat.decrepit.ciphers.algorithms.const": {
+    "blob_name": "cryptography.hazmat.decrepit.ciphers.algorithms",
+    "blob_size": 1092,
+    "input_size": 1974
+  },
+  "module.cryptography.hazmat.decrepit.ciphers.const": {
+    "blob_name": "cryptography.hazmat.decrepit.ciphers",
+    "blob_size": 533,
+    "input_size": 847
+  },
+  "module.cryptography.hazmat.decrepit.const": {
+    "blob_name": "cryptography.hazmat.decrepit",
+    "blob_size": 422,
+    "input_size": 709
+  },
+  "module.cryptography.hazmat.primitives._asymmetric.const": {
+    "blob_name": "cryptography.hazmat.primitives._asymmetric",
+    "blob_size": 577,
+    "input_size": 952
+  },
+  "module.cryptography.hazmat.primitives._cipheralgorithm.const": {
+    "blob_name": "cryptography.hazmat.primitives._cipheralgorithm",
+    "blob_size": 1235,
+    "input_size": 1909
+  },
+  "module.cryptography.hazmat.primitives._serialization.const": {
+    "blob_name": "cryptography.hazmat.primitives._serialization",
+    "blob_size": 2922,
+    "input_size": 3649
+  },
+  "module.cryptography.hazmat.primitives.asymmetric.const": {
+    "blob_name": "cryptography.hazmat.primitives.asymmetric",
+    "blob_size": 550,
+    "input_size": 851
+  },
+  "module.cryptography.hazmat.primitives.asymmetric.dh.const": {
+    "blob_name": "cryptography.hazmat.primitives.asymmetric.dh",
+    "blob_size": 2913,
+    "input_size": 3898
+  },
+  "module.cryptography.hazmat.primitives.asymmetric.dsa.const": {
+    "blob_name": "cryptography.hazmat.primitives.asymmetric.dsa",
+    "blob_size": 3297,
+    "input_size": 4301
+  },
+  "module.cryptography.hazmat.primitives.asymmetric.ec.const": {
+    "blob_name": "cryptography.hazmat.primitives.asymmetric.ec",
+    "blob_size": 7022,
+    "input_size": 9380
+  },
+  "module.cryptography.hazmat.primitives.asymmetric.ed25519.const": {
+    "blob_name": "cryptography.hazmat.primitives.asymmetric.ed25519",
+    "blob_size": 2774,
+    "input_size": 3677
+  },
+  "module.cryptography.hazmat.primitives.asymmetric.ed448.const": {
+    "blob_name": "cryptography.hazmat.primitives.asymmetric.ed448",
+    "blob_size": 2724,
+    "input_size": 3652
+  },
+  "module.cryptography.hazmat.primitives.asymmetric.padding.const": {
+    "blob_name": "cryptography.hazmat.primitives.asymmetric.padding",
+    "blob_size": 1845,
+    "input_size": 2824
+  },
+  "module.cryptography.hazmat.primitives.asymmetric.rsa.const": {
+    "blob_name": "cryptography.hazmat.primitives.asymmetric.rsa",
+    "blob_size": 5053,
+    "input_size": 6428
+  },
+  "module.cryptography.hazmat.primitives.asymmetric.types.const": {
+    "blob_name": "cryptography.hazmat.primitives.asymmetric.types",
+    "blob_size": 1347,
+    "input_size": 2048
+  },
+  "module.cryptography.hazmat.primitives.asymmetric.utils.const": {
+    "blob_name": "cryptography.hazmat.primitives.asymmetric.utils",
+    "blob_size": 654,
+    "input_size": 1076
+  },
+  "module.cryptography.hazmat.primitives.asymmetric.x25519.const": {
+    "blob_name": "cryptography.hazmat.primitives.asymmetric.x25519",
+    "blob_size": 2705,
+    "input_size": 3564
+  },
+  "module.cryptography.hazmat.primitives.asymmetric.x448.const": {
+    "blob_name": "cryptography.hazmat.primitives.asymmetric.x448",
+    "blob_size": 2651,
+    "input_size": 3524
+  },
+  "module.cryptography.hazmat.primitives.ciphers.algorithms.const": {
+    "blob_name": "cryptography.hazmat.primitives.ciphers.algorithms",
+    "blob_size": 1782,
+    "input_size": 2785
+  },
+  "module.cryptography.hazmat.primitives.ciphers.base.const": {
+    "blob_name": "cryptography.hazmat.primitives.ciphers.base",
+    "blob_size": 2960,
+    "input_size": 4068
+  },
+  "module.cryptography.hazmat.primitives.ciphers.const": {
+    "blob_name": "cryptography.hazmat.primitives.ciphers",
+    "blob_size": 1035,
+    "input_size": 1349
+  },
+  "module.cryptography.hazmat.primitives.ciphers.modes.const": {
+    "blob_name": "cryptography.hazmat.primitives.ciphers.modes",
+    "blob_size": 3699,
+    "input_size": 5133
+  },
+  "module.cryptography.hazmat.primitives.const": {
+    "blob_name": "cryptography.hazmat.primitives",
+    "blob_size": 419,
+    "input_size": 693
+  },
+  "module.cryptography.hazmat.primitives.constant_time.const": {
+    "blob_name": "cryptography.hazmat.primitives.constant_time",
+    "blob_size": 274,
+    "input_size": 488
+  },
+  "module.cryptography.hazmat.primitives.hashes.const": {
+    "blob_name": "cryptography.hazmat.primitives.hashes",
+    "blob_size": 2628,
+    "input_size": 4109
+  },
+  "module.cryptography.hazmat.primitives.hmac.const": {
+    "blob_name": "cryptography.hazmat.primitives.hmac",
+    "blob_size": 330,
+    "input_size": 581
+  },
+  "module.cryptography.hazmat.primitives.padding.const": {
+    "blob_name": "cryptography.hazmat.primitives.padding",
+    "blob_size": 1345,
+    "input_size": 1990
+  },
+  "module.cryptography.hazmat.primitives.serialization.base.const": {
+    "blob_name": "cryptography.hazmat.primitives.serialization.base",
+    "blob_size": 431,
+    "input_size": 711
+  },
+  "module.cryptography.hazmat.primitives.serialization.const": {
+    "blob_name": "cryptography.hazmat.primitives.serialization",
+    "blob_size": 2291,
+    "input_size": 2370
+  },
+  "module.cryptography.hazmat.primitives.serialization.ssh.const": {
+    "blob_name": "cryptography.hazmat.primitives.serialization.ssh",
+    "blob_size": 20076,
+    "input_size": 26047
+  },
+  "module.cryptography.utils.const": {
+    "blob_name": "cryptography.utils",
+    "blob_size": 2205,
+    "input_size": 3318
+  },
+  "module.cryptography.x509.base.const": {
+    "blob_name": "cryptography.x509.base",
+    "blob_size": 12472,
+    "input_size": 15202
+  },
+  "module.cryptography.x509.certificate_transparency.const": {
+    "blob_name": "cryptography.x509.certificate_transparency",
+    "blob_size": 830,
+    "input_size": 1338
+  },
+  "module.cryptography.x509.const": {
+    "blob_name": "cryptography.x509",
+    "blob_size": 8109,
+    "input_size": 9083
+  },
+  "module.cryptography.x509.extensions.const": {
+    "blob_name": "cryptography.x509.extensions",
+    "blob_size": 29812,
+    "input_size": 39659
+  },
+  "module.cryptography.x509.general_name.const": {
+    "blob_name": "cryptography.x509.general_name",
+    "blob_size": 3424,
+    "input_size": 5042
+  },
+  "module.cryptography.x509.name.const": {
+    "blob_name": "cryptography.x509.name",
+    "blob_size": 7365,
+    "input_size": 10907
+  },
+  "module.cryptography.x509.oid.const": {
+    "blob_name": "cryptography.x509.oid",
+    "blob_size": 969,
+    "input_size": 977
+  },
+  "module.cryptography.x509.verification.const": {
+    "blob_name": "cryptography.x509.verification",
+    "blob_size": 589,
+    "input_size": 965
+  },
+  "module.gui.const": {
+    "blob_name": "gui",
+    "blob_size": 5046,
+    "input_size": 7794
+  },
+  "module.idna.const": {
+    "blob_name": "idna",
+    "blob_size": 1141,
+    "input_size": 1295
+  },
+  "module.idna.core.const": {
+    "blob_name": "idna.core",
+    "blob_size": 3820,
+    "input_size": 5903
+  },
+  "module.idna.idnadata.const": {
+    "blob_name": "idna.idnadata",
+    "blob_size": 22792,
+    "input_size": 28998
+  },
+  "module.idna.intranges.const": {
+    "blob_name": "idna.intranges",
+    "blob_size": 1058,
+    "input_size": 1565
+  },
+  "module.idna.package_data.const": {
+    "blob_name": "idna.package_data",
+    "blob_size": 136,
+    "input_size": 277
+  },
+  "module.idna.uts46data.const": {
+    "blob_name": "idna.uts46data",
+    "blob_size": 92436,
+    "input_size": 101500
+  },
+  "module.requests.__version__.const": {
+    "blob_name": "requests.__version__",
+    "blob_size": 419,
+    "input_size": 794
+  },
+  "module.requests._internal_utils.const": {
+    "blob_name": "requests._internal_utils",
+    "blob_size": 1101,
+    "input_size": 1544
+  },
+  "module.requests.adapters.const": {
+    "blob_name": "requests.adapters",
+    "blob_size": 16373,
+    "input_size": 18676
+  },
+  "module.requests.api.const": {
+    "blob_name": "requests.api",
+    "blob_size": 5721,
+    "input_size": 6246
+  },
+  "module.requests.auth.const": {
+    "blob_name": "requests.auth",
+    "blob_size": 3783,
+    "input_size": 6233
+  },
+  "module.requests.certs.const": {
+    "blob_name": "requests.certs",
+    "blob_size": 464,
+    "input_size": 619
+  },
+  "module.requests.compat.const": {
+    "blob_name": "requests.compat",
+    "blob_size": 1398,
+    "input_size": 1953
+  },
+  "module.requests.const": {
+    "blob_name": "requests",
+    "blob_size": 2809,
+    "input_size": 3490
+  },
+  "module.requests.cookies.const": {
+    "blob_name": "requests.cookies",
+    "blob_size": 11044,
+    "input_size": 14165
+  },
+  "module.requests.exceptions.const": {
+    "blob_name": "requests.exceptions",
+    "blob_size": 3192,
+    "input_size": 4373
+  },
+  "module.requests.hooks.const": {
+    "blob_name": "requests.hooks",
+    "blob_size": 478,
+    "input_size": 725
+  },
+  "module.requests.models.const": {
+    "blob_name": "requests.models",
+    "blob_size": 13869,
+    "input_size": 17950
+  },
+  "module.requests.packages.const": {
+    "blob_name": "requests.packages",
+    "blob_size": 265,
+    "input_size": 560
+  },
+  "module.requests.sessions.const": {
+    "blob_name": "requests.sessions",
+    "blob_size": 13146,
+    "input_size": 15982
+  },
+  "module.requests.status_codes.const": {
+    "blob_name": "requests.status_codes",
+    "blob_size": 3249,
+    "input_size": 3823
+  },
+  "module.requests.structures.const": {
+    "blob_name": "requests.structures",
+    "blob_size": 2423,
+    "input_size": 3368
+  },
+  "module.requests.utils.const": {
+    "blob_name": "requests.utils",
+    "blob_size": 14197,
+    "input_size": 19377
+  },
+  "module.security.const": {
+    "blob_name": "security",
+    "blob_size": 1153,
+    "input_size": 1805
+  },
+  "module.tkinter-preLoad.const": {
+    "blob_name": "tkinter-preLoad",
+    "blob_size": 187,
+    "input_size": 406
+  },
+  "module.updater.const": {
+    "blob_name": "updater",
+    "blob_size": 3094,
+    "input_size": 4709
+  },
+  "module.urllib3._base_connection.const": {
+    "blob_name": "urllib3._base_connection",
+    "blob_size": 839,
+    "input_size": 1448
+  },
+  "module.urllib3._collections.const": {
+    "blob_name": "urllib3._collections",
+    "blob_size": 8422,
+    "input_size": 10621
+  },
+  "module.urllib3._request_methods.const": {
+    "blob_name": "urllib3._request_methods",
+    "blob_size": 7917,
+    "input_size": 8559
+  },
+  "module.urllib3._version.const": {
+    "blob_name": "urllib3._version",
+    "blob_size": 300,
+    "input_size": 562
+  },
+  "module.urllib3.connection.const": {
+    "blob_name": "urllib3.connection",
+    "blob_size": 16528,
+    "input_size": 18984
+  },
+  "module.urllib3.connectionpool.const": {
+    "blob_name": "urllib3.connectionpool",
+    "blob_size": 21433,
+    "input_size": 23864
+  },
+  "module.urllib3.const": {
+    "blob_name": "urllib3",
+    "blob_size": 5464,
+    "input_size": 6309
+  },
+  "module.urllib3.contrib.const": {
+    "blob_name": "urllib3.contrib",
+    "blob_size": 294,
+    "input_size": 541
+  },
+  "module.urllib3.contrib.pyopenssl.const": {
+    "blob_name": "urllib3.contrib.pyopenssl",
+    "blob_size": 9261,
+    "input_size": 12757
+  },
+  "module.urllib3.contrib.socks.const": {
+    "blob_name": "urllib3.contrib.socks",
+    "blob_size": 3974,
+    "input_size": 5147
+  },
+  "module.urllib3.exceptions.const": {
+    "blob_name": "urllib3.exceptions",
+    "blob_size": 6730,
+    "input_size": 8895
+  },
+  "module.urllib3.fields.const": {
+    "blob_name": "urllib3.fields",
+    "blob_size": 7361,
+    "input_size": 8460
+  },
+  "module.urllib3.filepost.const": {
+    "blob_name": "urllib3.filepost",
+    "blob_size": 1435,
+    "input_size": 2049
+  },
+  "module.urllib3.http2.connection.const": {
+    "blob_name": "urllib3.http2.connection",
+    "blob_size": 6362,
+    "input_size": 8434
+  },
+  "module.urllib3.http2.const": {
+    "blob_name": "urllib3.http2",
+    "blob_size": 984,
+    "input_size": 1455
+  },
+  "module.urllib3.http2.probe.const": {
+    "blob_name": "urllib3.http2.probe",
+    "blob_size": 1093,
+    "input_size": 1674
+  },
+  "module.urllib3.poolmanager.const": {
+    "blob_name": "urllib3.poolmanager",
+    "blob_size": 13738,
+    "input_size": 16376
+  },
+  "module.urllib3.response.const": {
+    "blob_name": "urllib3.response",
+    "blob_size": 17785,
+    "input_size": 22303
+  },
+  "module.urllib3.util.connection.const": {
+    "blob_name": "urllib3.util.connection",
+    "blob_size": 2255,
+    "input_size": 2970
+  },
+  "module.urllib3.util.const": {
+    "blob_name": "urllib3.util",
+    "blob_size": 1253,
+    "input_size": 1584
+  },
+  "module.urllib3.util.proxy.const": {
+    "blob_name": "urllib3.util.proxy",
+    "blob_size": 715,
+    "input_size": 970
+  },
+  "module.urllib3.util.request.const": {
+    "blob_name": "urllib3.util.request",
+    "blob_size": 4516,
+    "input_size": 5760
+  },
+  "module.urllib3.util.response.const": {
+    "blob_name": "urllib3.util.response",
+    "blob_size": 1482,
+    "input_size": 1987
+  },
+  "module.urllib3.util.retry.const": {
+    "blob_name": "urllib3.util.retry",
+    "blob_size": 11369,
+    "input_size": 12986
+  },
+  "module.urllib3.util.ssl_.const": {
+    "blob_name": "urllib3.util.ssl_",
+    "blob_size": 9483,
+    "input_size": 10903
+  },
+  "module.urllib3.util.ssl_match_hostname.const": {
+    "blob_name": "urllib3.util.ssl_match_hostname",
+    "blob_size": 2419,
+    "input_size": 3417
+  },
+  "module.urllib3.util.ssltransport.const": {
+    "blob_name": "urllib3.util.ssltransport",
+    "blob_size": 5060,
+    "input_size": 6816
+  },
+  "module.urllib3.util.timeout.const": {
+    "blob_name": "urllib3.util.timeout",
+    "blob_size": 7555,
+    "input_size": 8702
+  },
+  "module.urllib3.util.url.const": {
+    "blob_name": "urllib3.util.url",
+    "blob_size": 6847,
+    "input_size": 9604
+  },
+  "module.urllib3.util.util.const": {
+    "blob_name": "urllib3.util.util",
+    "blob_size": 582,
+    "input_size": 946
+  },
+  "module.urllib3.util.wait.const": {
+    "blob_name": "urllib3.util.wait",
+    "blob_size": 1177,
+    "input_size": 1654
+  },
+  "module.zstandard.backend_cffi.const": {
+    "blob_name": "zstandard.backend_cffi",
+    "blob_size": 87301,
+    "input_size": 96534
+  },
+  "module.zstandard.const": {
+    "blob_name": "zstandard",
+    "blob_size": 3872,
+    "input_size": 5051
+  },
+  "total": 17014
+}
