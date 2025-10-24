@@ -1,108 +1,55 @@
-; ==========================================================
-; CodePass — Online Installer PRO
-; (C) 2025 CodePass Software
-; ==========================================================
+; ==========================================
+; 🔐 CodePass Installer — Inno Setup Script
+; ==========================================
 
 #define MyAppName "CodePass"
-#define MyAppPublisher "CodePass Software"
+#define MyAppVersion "2.1.7"            ; <- wpisz tu aktualną wersję
+#define MyAppPublisher "codepass0v12"
 #define MyAppExeName "CodePass.exe"
-#define MyAppURL "https://github.com/codepass0v12/Codepass"
-#define MyAppVersion "2.0.6"
+
+; Uwaga: .iss jest w "Installer/", więc do plików w ../dist i ../assets używamy ścieżek z "..\"
+#define AppIcon "..\assets\logo.ico"
+#define AppExe  "..\dist\CodePass.exe"
+#define OutDir  "..\dist"
 
 [Setup]
-AppId={{C0D3-PA55-1234-5678-ABCDEF000001}}
+AppId={{BFCF9E5D-3C23-4E27-A89E-FF1122334455}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
-AppPublisherURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
-OutputDir=..\dist
-OutputBaseFilename=CodePass_Online_Installer
+OutputDir={#OutDir}
+OutputBaseFilename=CodePass_Installer
+SetupIconFile={#AppIcon}
 Compression=lzma
 SolidCompression=yes
-SetupIconFile=..\assets\logo.ico
 WizardStyle=modern
-LicenseFile=LICENSE.txt
-PrivilegesRequired=admin
-DisableProgramGroupPage=yes
 UninstallDisplayIcon={app}\{#MyAppExeName}
-UninstallDisplayName={#MyAppName}
+PrivilegesRequired=admin
+ArchitecturesInstallIn64BitMode=x64
+DisableDirPage=no
+DisableProgramGroupPage=yes
 
 [Languages]
 Name: "polish"; MessagesFile: "compiler:Languages\Polish.isl"
-
-[Tasks]
-Name: "desktopicon"; Description: "Utwórz ikonę na pulpicie"; GroupDescription: "Dodatkowe zadania"; Flags: unchecked
-Name: "autoupdate"; Description: "Sprawdź aktualizacje po instalacji"; GroupDescription: "Dodatkowe zadania"; Flags: unchecked
+Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
-Source: "..\assets\logo.ico"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\public_key.pem"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\installer\downloader.ps1"; DestDir: "{tmp}"; Flags: deleteafterinstall
-Source: "..\installer\LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
+; plik EXE aplikacji
+Source: "{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion
+; ikona (nieobowiązkowa, ale ładnie wygląda w odinstalatorze)
+Source: "{#AppIcon}"; DestDir: "{app}"; Flags: ignoreversion
 
-[Dirs]
-Name: "{userappdata}\CodePass"; Flags: uninsalwaysuninstall
+[Tasks]
+Name: "desktopicon"; Description: "Utwórz ikonę na pulpicie"; GroupDescription: "Skróty:"
 
 [Icons]
-; Menu Start
+; skrót w menu Start
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-; Skrót na pulpicie (jeśli użytkownik zaznaczy)
+; skrót na pulpicie (opcjonalny)
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-; 1️⃣ Pobiera i instaluje najnowszą wersję z GitHuba
-Filename: "powershell"; \
-  Parameters: "-ExecutionPolicy Bypass -File ""{tmp}\downloader.ps1"" -installDir ""{app}"""; \
-  Flags: runhidden waituntilterminated
-; 2️⃣ Uruchamia CodePass po instalacji
-Filename: "{app}\{#MyAppExeName}"; Description: "Uruchom CodePass po instalacji"; Flags: nowait postinstall skipifsilent
-; 3️⃣ Opcjonalnie sprawdza aktualizacje
-Filename: "{app}\{#MyAppExeName}"; Description: "Sprawdź aktualizacje po instalacji"; Flags: postinstall skipifsilent; Tasks: autoupdate
-
-[UninstallDelete]
-Type: files; Name: "{app}\update.json"
-Type: files; Name: "{app}\update_*.zip"
-Type: files; Name: "{app}\update_*.sig"
-Type: dirifempty; Name: "{userappdata}\CodePass"
-
-[Code]
-var
-  UserDataDirPage: TInputDirWizardPage;
-
-function InitializeSetup(): Boolean;
-var
-  ResultCode: Integer;
-begin
-  if DirExists(ExpandConstant('{app}')) then begin
-    MsgBox('Wykryto istniejącą instalację CodePass. Stara wersja zostanie odinstalowana.', mbInformation, MB_OK);
-    Exec(ExpandConstant('{uninstallexe}'), '/VERYSILENT', '', SW_SHOW, ewWaitUntilTerminated, ResultCode);
-  end;
-  Result := True;
-end;
-
-procedure InitializeWizard;
-begin
-  UserDataDirPage := CreateInputDirPage(
-    wpSelectDir,
-    'Folder danych użytkownika',
-    'Wybierz, gdzie CodePass ma przechowywać dane użytkownika.',
-    'Zalecane jest pozostawienie domyślnego folderu AppData.',
-    False, ''
-  );
-  UserDataDirPage.Add('');
-  UserDataDirPage.Values[0] := ExpandConstant('{userappdata}\CodePass');
-end;
-
-procedure CurStepChanged(CurStep: TSetupStep);
-var
-  DataDir: string;
-begin
-  if CurStep = ssPostInstall then begin
-    DataDir := UserDataDirPage.Values[0];
-    if not DirExists(DataDir) then
-      ForceDirectories(DataDir);
-    SaveStringToFile(ExpandConstant('{app}\userdata_path.txt'), DataDir, False);
-  end;
-end;
+; uruchom aplikację po instalacji
+Filename: "{app}\{#MyAppExeName}"; Description: "Uruchom CodePass"; Flags: nowait postinstall skipifsilent
