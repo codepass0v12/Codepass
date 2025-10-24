@@ -1,4 +1,4 @@
-import os, subprocess, zipfile, json, shutil, base64
+import os, sys, subprocess, zipfile, json, shutil
 from datetime import datetime
 from time import sleep
 from cryptography.hazmat.primitives import hashes, serialization
@@ -15,9 +15,9 @@ ASSETS_DIR = os.path.join(PROJECT_DIR, "assets")
 VERSION_PATH = os.path.join(PROJECT_DIR, "version.txt")
 PRIVATE_KEY_PATH = os.path.join(PROJECT_DIR, "private_key.pem")
 PUBLIC_KEY_PATH  = os.path.join(PROJECT_DIR, "public_key.pem")
+UPDATE_BASE_URL  = "https://raw.githubusercontent.com/codepass0v12/Codepass/main/dist"
 
-UPDATE_BASE_URL = "https://raw.githubusercontent.com/codepass0v12/Codepass/main/dist"
-REPO = "codepass0v12/Codepass"
+PYTHON_EXE = sys.executable  # ✅ automatycznie wykrywa właściwego Pythona
 
 # ======================================
 # FUNKCJE
@@ -26,33 +26,40 @@ REPO = "codepass0v12/Codepass"
 def ask_version():
     if not os.path.exists(VERSION_PATH):
         open(VERSION_PATH, "w", encoding="utf-8").write("1.0.0")
-    cur = open(VERSION_PATH,"r",encoding="utf-8").read().strip()
+    cur = open(VERSION_PATH, "r", encoding="utf-8").read().strip()
     print(f"📦 Aktualna wersja: {cur}")
     newv = input("🔹 Podaj nową wersję (ENTER = bez zmian): ").strip()
     if newv:
-        open(VERSION_PATH,"w",encoding="utf-8").write(newv)
+        open(VERSION_PATH, "w", encoding="utf-8").write(newv)
         print(f"✅ Zmieniono wersję: {cur} → {newv}")
         return newv
     return cur
+
 
 def build_exe(version: str):
     print(f"🔨 Kompilacja CodePass v{version} przez Nuitka...")
     exe_out = os.path.join(DIST_DIR, "CodePass.exe")
     os.makedirs(DIST_DIR, exist_ok=True)
-    cmd = [
-        r"C:\Users\Administrator\PyCharmMiscProject\.venv\Scripts\python.exe", "-m", "nuitka",
 
+    cmd = [
+        PYTHON_EXE, "-m", "nuitka",
         "--onefile",
         "--standalone",
         "--remove-output",
         "--windows-console-mode=disable",
         "--enable-plugin=tk-inter",
+        "--include-package=gui",
+        "--include-package=updater",
+        "--include-package=security",
+        "--include-package-data=cryptography",
+        "--include-package-data=requests",
+        "--include-package-data=winrt",
         "--windows-icon-from-ico=" + os.path.join(ASSETS_DIR, "logo.ico"),
         "--include-data-file=version.txt=version.txt",
-        "--include-data-file=" + os.path.join(ASSETS_DIR, "logo.ico") + "=logo.ico",
         "--output-filename=" + exe_out,
         os.path.join(SRC_DIR, "main.py")
     ]
+
     res = subprocess.run(cmd)
     if res.returncode != 0:
         raise RuntimeError("❌ Błąd kompilacji Nuitka.")
@@ -60,24 +67,6 @@ def build_exe(version: str):
     sleep(1)
     return exe_out
 
-def sign_zip(zip_path: str):
-    print("🔏 Podpisywanie ZIP...")
-    sig_path = zip_path.replace(".zip", ".sig")
-    with open(PRIVATE_KEY_PATH,"rb") as f:
-        priv = serialization.load_pem_private_key(f.read(), password=None)
-    data = open(zip_path,"rb").read()
-    sig = priv.sign(data, padding.PKCS1v15(), hashes.SHA256())
-    open(sig_path,"wb").write(sig)
-    print("✅ Podpis zapisany:", sig_path)
-    return sig_path
-
-def verify_sig(zip_path, sig_path):
-    with open(PUBLIC_KEY_PATH,"rb") as f:
-        pub = serialization.load_pem_public_key(f.read())
-    data = open(zip_path,"rb").read()
-    sig  = open(sig_path,"rb").read()
-    pub.verify(sig, data, padding.PKCS1v15(), hashes.SHA256())
-    print("✅ Weryfikacja podpisu OK.")
 
 def create_zip(version: str, exe_path: str):
     zip_path = os.path.join(DIST_DIR, f"update_{version}.zip")
@@ -88,6 +77,28 @@ def create_zip(version: str, exe_path: str):
         zipf.write(ver_path, "version.txt")
     print("📦 ZIP utworzony:", zip_path)
     return zip_path
+
+
+def sign_zip(zip_path: str):
+    print("🔏 Podpisywanie ZIP...")
+    sig_path = zip_path.replace(".zip", ".sig")
+    with open(PRIVATE_KEY_PATH, "rb") as f:
+        priv = serialization.load_pem_private_key(f.read(), password=None)
+    data = open(zip_path, "rb").read()
+    sig = priv.sign(data, padding.PKCS1v15(), hashes.SHA256())
+    open(sig_path, "wb").write(sig)
+    print("✅ Podpis zapisany:", sig_path)
+    return sig_path
+
+
+def verify_sig(zip_path, sig_path):
+    with open(PUBLIC_KEY_PATH, "rb") as f:
+        pub = serialization.load_pem_public_key(f.read())
+    data = open(zip_path, "rb").read()
+    sig  = open(sig_path, "rb").read()
+    pub.verify(sig, data, padding.PKCS1v15(), hashes.SHA256())
+    print("✅ Weryfikacja podpisu OK.")
+
 
 def create_manifest(version: str, zip_path: str, sig_path: str):
     print("📝 Tworzenie update.json...")
@@ -103,7 +114,13 @@ def create_manifest(version: str, zip_path: str, sig_path: str):
     print("✅ Manifest:", path)
     return path
 
+
 def git_push_and_release(version: str):
+    choice = input("📤 Czy chcesz opublikować nową wersję na GitHubie? (t/n): ").strip().lower()
+    if choice != "t":
+        print("⏩ Pomijam upload na GitHub.")
+        return
+
     print("🚀 Wysyłanie na GitHub...")
     cmds = [
         ["git", "add", "."],
@@ -114,19 +131,22 @@ def git_push_and_release(version: str):
     ]
     for cmd in cmds:
         subprocess.run(cmd)
+
     gh = shutil.which("gh")
     if not gh:
         print("⚠️ gh CLI nie znaleziony — pomijam Release.")
         return
+
     subprocess.run([
         gh, "release", "create", f"v{version}",
         os.path.join(DIST_DIR, f"update_{version}.zip"),
         os.path.join(DIST_DIR, f"update_{version}.sig"),
         os.path.join(DIST_DIR, "update.json"),
         "--title", f"CodePass v{version}",
-        "--notes", "Automatyczny release"
+        "--notes", "Automatyczny release z CodePass Buildera"
     ])
     print("✅ GitHub Release gotowy.")
+
 
 def main():
     version = ask_version()
@@ -136,8 +156,9 @@ def main():
     verify_sig(zipf, sigf)
     create_manifest(version, zipf, sigf)
     git_push_and_release(version)
-    print("🎉 GOTOWE: CodePass v" + version)
+    print(f"🎉 GOTOWE! CodePass v{version}")
     subprocess.Popen(f'explorer "{DIST_DIR}"')
+
 
 if __name__ == "__main__":
     main()
