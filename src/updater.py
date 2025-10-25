@@ -1,12 +1,11 @@
 import os
 import sys
 import json
-import base64
+import requests
 import zipfile
 import tempfile
-import requests
-import subprocess
 import shutil
+import subprocess
 from tkinter import messagebox
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
@@ -32,12 +31,12 @@ CTo/lCD+aqRRrTM0m5H24itlSq3oPJ8xweas+fO37uKLS6zRChuVIvg636ZSAWm9
 """
 
 # =======================================
-# 🔒 Weryfikacja podpisu ZIP
+# 🔒 Weryfikacja podpisu ZIP (binarnie, bez base64)
 # =======================================
-def verify_zip_signature(zip_bytes: bytes, signature_b64: str) -> bool:
+def verify_zip_signature(zip_bytes: bytes, signature: bytes) -> bool:
+    """Sprawdza podpis RSA (PKCS1v15 + SHA256)."""
     try:
         public_key = serialization.load_pem_public_key(PUBLIC_KEY_PEM)
-        signature = base64.b64decode(signature_b64)
         public_key.verify(signature, zip_bytes, padding.PKCS1v15(), hashes.SHA256())
         print("✅ Weryfikacja podpisu ZIP OK.")
         return True
@@ -49,7 +48,8 @@ def verify_zip_signature(zip_bytes: bytes, signature_b64: str) -> bool:
 # =======================================
 # 📄 Odczyt lokalnej wersji
 # =======================================
-def get_local_version():
+def get_local_version() -> str:
+    """Zwraca lokalną wersję aplikacji z pliku version.txt."""
     try:
         with open("version.txt", "r", encoding="utf-8") as f:
             return f.read().strip()
@@ -61,6 +61,7 @@ def get_local_version():
 # 🌐 Sprawdzanie aktualizacji
 # =======================================
 def check_for_updates(current_version: str, manifest_url: str):
+    """Pobiera manifest aktualizacji z GitHuba."""
     try:
         response = requests.get(manifest_url, timeout=10)
         response.raise_for_status()
@@ -80,9 +81,10 @@ def check_for_updates(current_version: str, manifest_url: str):
 
 
 # =======================================
-# ⚙️ Instalacja aktualizacji
+# ⚙️ Instalacja aktualizacji (z weryfikacją podpisu)
 # =======================================
 def perform_update_flow(manifest: dict):
+    """Pobiera, weryfikuje i instaluje nową wersję CodePass."""
     version = manifest.get("version", "Nieznana")
     download_url = manifest.get("download_url")
     sig_url = manifest.get("sig_url")
@@ -99,12 +101,11 @@ def perform_update_flow(manifest: dict):
         if sig_url:
             print("[Aktualizacja] Sprawdzanie podpisu...")
             sig_data = requests.get(sig_url, timeout=10).content
-            sig_b64 = base64.b64encode(sig_data).decode()
-            if not verify_zip_signature(zip_data, sig_b64):
+            if not verify_zip_signature(zip_data, sig_data):
                 messagebox.showerror("Błąd", "Niepoprawny podpis aktualizacji. Aktualizacja została anulowana.")
                 return
 
-        # 🧩 Przygotowanie katalogów
+        # 🧩 Przygotowanie katalogu tymczasowego
         app_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
         tmp_dir = os.path.join(tempfile.gettempdir(), f"CodePass_Update_{version}")
         os.makedirs(tmp_dir, exist_ok=True)
@@ -113,12 +114,12 @@ def perform_update_flow(manifest: dict):
         with open(zip_path, "wb") as f:
             f.write(zip_data)
 
-        # 📂 Rozpakowanie ZIP
+        # 📦 Rozpakowanie
         with zipfile.ZipFile(zip_path, "r") as zip_ref:
             zip_ref.extractall(tmp_dir)
         os.remove(zip_path)
 
-        # 🔄 Podmiana plików
+        # 🔄 Kopiowanie plików
         print("[Aktualizacja] Kopiowanie plików...")
         for root_dir, _, files in os.walk(tmp_dir):
             for file in files:
@@ -128,37 +129,28 @@ def perform_update_flow(manifest: dict):
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 try:
                     if os.path.exists(dst):
-                        os.chmod(dst, 0o666)  # usuń blokadę zapisu
+                        os.chmod(dst, 0o666)
                         os.remove(dst)
                     shutil.move(src, dst)
-                except PermissionError:
-                    print(f"⚠️ Brak dostępu do pliku: {dst}")
                 except Exception as e:
                     print(f"⚠️ Błąd kopiowania {dst}: {e}")
 
-        # 🧹 Sprzątanie tymczasowych plików
-        try:
-            shutil.rmtree(tmp_dir, ignore_errors=True)
-        except Exception:
-            pass
+        # 🧹 Sprzątanie
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
-        # ✍️ Aktualizacja wersji
-        version_file = os.path.join(app_dir, "version.txt")
-        with open(version_file, "w", encoding="utf-8") as vf:
+        # ✍️ Zaktualizuj version.txt
+        with open(os.path.join(app_dir, "version.txt"), "w", encoding="utf-8") as vf:
             vf.write(version)
 
         messagebox.showinfo("Aktualizacja", f"Pomyślnie zaktualizowano do wersji {version}!")
 
         # 🚀 Restart aplikacji
         exe_path = os.path.join(app_dir, os.path.basename(sys.argv[0]))
-
-        # 🔓 Odblokowanie EXE (Windows flag "z internetu")
         try:
             subprocess.run(["powershell", "-Command", f"Unblock-File '{exe_path}'"], check=False)
         except Exception:
             pass
 
-        # 🔁 Uruchom ponownie aplikację
         try:
             subprocess.Popen([exe_path], close_fds=True)
             os._exit(0)

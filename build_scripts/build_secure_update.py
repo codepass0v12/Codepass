@@ -47,6 +47,7 @@ from typing import List, Optional  # dodaj na górze pliku, jeśli jeszcze nie m
 
 def run(cmd: List[str], check: bool = True, cwd: Optional[Path] = None) -> subprocess.CompletedProcess:
 
+
     """Uruchamia proces i ładnie drukuje komendę + obsługuje błędy."""
     print("▶", " ".join(f'"{c}"' if " " in c else c for c in cmd))
     return subprocess.run(cmd, check=check, cwd=str(cwd) if cwd else None)
