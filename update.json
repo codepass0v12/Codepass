@@ -1,7 +1,4 @@
 {
-    "version": "2.2.2",
-    "timestamp": "2025-10-25T18:57:19Z",
-    "download_url": "https://raw.githubusercontent.com/codepass0v12/Codepass/main/dist/update_2.2.2.zip",
-    "sig_url": "https://raw.githubusercontent.com/codepass0v12/Codepass/main/dist/update_2.2.2.sig",
-    "exe_url": "https://raw.githubusercontent.com/codepass0v12/Codepass/main/dist/CodePass.exe"
+  "version": "2.5.0",
+  "download_url": "https://github.com/codepass0v12/Codepass/releases/download/v2.5.0/update.zip"
 }
