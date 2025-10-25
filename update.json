@@ -1,6 +1,4 @@
 {
-    "version": "1.9.8",
-    "timestamp": "2025-10-24T10:44:08.304873",
-    "download_url": "https://raw.githubusercontent.com/codepass0v12/Codepass/main/dist/update_1.9.8.zip",
-    "sig_url": "https://raw.githubusercontent.com/codepass0v12/Codepass/main/dist/update_1.9.8.sig"
+  "version": "0.1",
+  "download_url": "https://github.com/codepass0v12/Codepass/releases/download/v0.1/update.zip"
 }
